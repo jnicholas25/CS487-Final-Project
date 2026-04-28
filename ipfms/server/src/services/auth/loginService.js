@@ -1,9 +1,9 @@
-const crypto = require('crypto');
 const User = require('../../models/User');
 const { AppError } = require('../../middleware/errorHandler');
 const { assertNotLocked, recordFailedAttempt, clearLockout } = require('./lockoutService');
-const { generateTokenPair } = require('./tokenService');
+const { generateTokenPair, verifyRefreshToken } = require('./tokenService');
 const { verifyToken, consumeBackupCode } = require('./twoFactorService');
+const env = require('../../config/environment');
 const logger = require('../../utils/logger');
 
 /**
@@ -161,8 +161,6 @@ async function verifyTwoFactor({ tempToken, totpCode, backupCode, ipAddress }) {
  * @returns {Promise<{ tokens: object }>}
  */
 async function refreshTokens(refreshToken) {
-  const { verifyRefreshToken, generateTokenPair: genPair } = require('./tokenService');
-
   let decoded;
   try {
     decoded = verifyRefreshToken(refreshToken);
@@ -175,7 +173,7 @@ async function refreshTokens(refreshToken) {
     throw new AppError('User not found or inactive', 401, 'USER_NOT_FOUND');
   }
 
-  const tokens = genPair({
+  const tokens = generateTokenPair({
     userId: user._id.toString(),
     email: user.email,
     role: user.role,
@@ -187,7 +185,7 @@ async function refreshTokens(refreshToken) {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 // Temp token: signed with a derived key, lives for 5 minutes
-const TEMP_TOKEN_SECRET = 'temp_2fa_' + (process.env.JWT_SECRET || 'dev');
+const TEMP_TOKEN_SECRET = 'temp_2fa_' + env.JWT_SECRET;
 
 function generateTempToken(userId) {
   const jwt = require('jsonwebtoken');

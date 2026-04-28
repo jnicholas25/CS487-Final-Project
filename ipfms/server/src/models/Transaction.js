@@ -149,6 +149,11 @@ const TransactionSchema = new mongoose.Schema(
       default: null,
     },
 
+    // ── Deduplication fingerprint ─────────────────────────────────────────────
+    // Normalised description used for Strategy-B duplicate matching.
+    // Set by transactionProcessor on creation; indexed for fast lookup.
+    descriptionFingerprint: { type: String, trim: true, default: null },
+
     // ── Soft delete ───────────────────────────────────────────────────────────
     deletedAt: { type: Date, default: null },
   },
@@ -186,6 +191,7 @@ TransactionSchema.index(
 );
 TransactionSchema.index({ isFlagged: 1, userId: 1 });
 TransactionSchema.index({ isRecurring: 1, userId: 1 });
+TransactionSchema.index({ accountId: 1, amount: 1, date: -1, descriptionFingerprint: 1 });
 TransactionSchema.index({ deletedAt: 1 });
 
 // ── Model ──────────────────────────────────────────────────────────────────────

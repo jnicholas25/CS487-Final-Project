@@ -1,7 +1,8 @@
+const mongoose = require('mongoose');
 const Transaction = require('../../models/Transaction');
 const Account = require('../../models/Account');
 const { categorise } = require('./autoCategorizer');
-const { checkDuplicate } = require('./duplicateDetector');
+const { checkDuplicate, buildFingerprint } = require('./duplicateDetector');
 const { AppError } = require('../../middleware/errorHandler');
 const logger = require('../../utils/logger');
 
@@ -98,6 +99,7 @@ async function createTransaction(userId, data) {
     isDuplicate,
     duplicateOf: duplicateOf || null,
     scheduledPaymentId: data.scheduledPaymentId || null,
+    descriptionFingerprint: buildFingerprint(data.description),
   });
 
   await transaction.save();
@@ -294,7 +296,7 @@ async function queryTransactions(userId, filters = {}) {
  */
 async function getSpendingByCategory(userId, startDate, endDate, accountId) {
   const matchStage = {
-    userId: require('mongoose').Types.ObjectId.createFromHexString(userId),
+    userId: new mongoose.Types.ObjectId(userId),
     deletedAt: null,
     isDuplicate: false,
     type: { $in: ['debit', 'fee'] },
@@ -302,7 +304,7 @@ async function getSpendingByCategory(userId, startDate, endDate, accountId) {
   };
 
   if (accountId) {
-    matchStage.accountId = require('mongoose').Types.ObjectId.createFromHexString(accountId);
+    matchStage.accountId = new mongoose.Types.ObjectId(accountId);
   }
 
   return Transaction.aggregate([

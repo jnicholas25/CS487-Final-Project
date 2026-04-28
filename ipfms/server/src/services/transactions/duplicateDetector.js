@@ -48,7 +48,11 @@ async function checkDuplicate(candidate) {
     }
   }
 
-  // Strategy B — Fingerprint
+  // Strategy B — Normalised fingerprint match
+  // We compare the normalised fingerprint stored on the existing document
+  // against the fingerprint of the incoming candidate.  This avoids the
+  // brittleness of applying a regex to raw bank descriptions (which often
+  // start with noise words like "POS PURCHASE" that would defeat a ^ anchor).
   const fingerprint = buildFingerprint(candidate.description);
   const dateFrom = new Date(candidate.date);
   dateFrom.setDate(dateFrom.getDate() - DEDUP_WINDOW_DAYS);
@@ -59,11 +63,10 @@ async function checkDuplicate(candidate) {
     accountId: candidate.accountId,
     amount: candidate.amount,
     date: { $gte: dateFrom, $lte: dateTo },
+    descriptionFingerprint: fingerprint,
     deletedAt: null,
     ...(candidate.excludeId && { _id: { $ne: candidate.excludeId } }),
-  }).where('description').regex(
-    new RegExp('^' + escapeRegex(fingerprint), 'i')
-  ).select('_id');
+  }).select('_id');
 
   if (fingerprintMatch) {
     return { isDuplicate: true, duplicateOf: fingerprintMatch._id.toString() };
@@ -99,15 +102,6 @@ function buildFingerprint(description) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 40);
-}
-
-/**
- * Escape special regex characters in a string.
- * @param {string} str
- * @returns {string}
- */
-function escapeRegex(str) {
-  return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 module.exports = { checkDuplicate, checkBatch, buildFingerprint };

@@ -261,7 +261,7 @@ const KEYWORD_RULES = [
   {
     category: 'Fees & Charges',
     subcategory: 'Bank Fees',
-    keywords: ['overdraft fee', 'service charge', 'monthly fee', 'bank fee', 'late fee', 'penalty fee'],
+    keywords: ['overdraft fee', 'service charge', 'bank fee', 'late fee', 'penalty fee'],
     confidence: 0.88,
   },
 ];

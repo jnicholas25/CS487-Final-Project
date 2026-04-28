@@ -7,9 +7,9 @@ const transactionRoutes = require('./transactionRoutes');  // Step 3
 const budgetRoutes      = require('./budgetRoutes');       // Step 4
 const paymentRoutes     = require('./paymentRoutes');      // Step 6
 const alertRoutes       = require('./alertRoutes');        // Step 5
-// Step 7+: uncomment as each feature is built
-// const investmentRoutes  = require('./investmentRoutes');
-// const reportRoutes      = require('./reportRoutes');
+const investmentRoutes  = require('./investmentRoutes');   // Step 7
+const reportRoutes      = require('./reportRoutes');       // Step 7
+// Step 8+: uncomment as each feature is built
 // const healthScoreRoutes = require('./healthScoreRoutes');
 
 // ── Mount routes ──────────────────────────────────────────────────────────────
@@ -18,8 +18,8 @@ router.use('/transactions', transactionRoutes);
 router.use('/budgets',      budgetRoutes);
 router.use('/payments',     paymentRoutes);
 router.use('/alerts',       alertRoutes);
-// router.use('/investments',  investmentRoutes);
-// router.use('/reports',      reportRoutes);
+router.use('/investments',  investmentRoutes);
+router.use('/reports',      reportRoutes);
 // router.use('/health-score', healthScoreRoutes);
 
 module.exports = router;

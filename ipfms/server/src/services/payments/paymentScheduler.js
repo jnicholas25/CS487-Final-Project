@@ -1,5 +1,5 @@
 /**
- * Payment Scheduler — Step 5 (Scheduled / Recurring Payments)
+ * Payment Scheduler — Step 6 / Algorithm 5.4 (Autopayment Manager)
  *
  * Manages the full lifecycle of a scheduled payment:
  *

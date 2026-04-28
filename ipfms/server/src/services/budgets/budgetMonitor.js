@@ -59,7 +59,8 @@ async function syncBudgetSpending(budgetId, userId) {
   // Update each category's spent amount
   let changed = false;
   for (const cat of budget.categories) {
-    const newSpent = spendingMap.get(cat.category) || 0;
+    // Round to 2 decimal places to avoid floating-point drift from $sum aggregation
+    const newSpent = Math.round((spendingMap.get(cat.category) || 0) * 100) / 100;
     if (cat.spent !== newSpent) {
       cat.spent = newSpent;
       changed = true;

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#0B0F1A" />
+    <meta name="description" content="IPFMS — Intelligent Personal Financial Management System. Track spending, budgets, investments and your financial health score." />
+    <meta name="color-scheme" content="dark light" />
+    <!-- Open Graph -->
+    <meta property="og:title"       content="IPFMS" />
+    <meta property="og:description" content="Intelligent Personal Financial Management System" />
+    <meta property="og:type"        content="website" />
+    <title>IPFMS</title>
+    <!-- Favicon via inline SVG -->
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>⬡</text></svg>" />
+    <!-- Skip-nav styles (WCAG 2.1 AA — visible on focus) -->
+    <style>
+      .skip-nav {
+        position: absolute;
+        top: -100%;
+        left: 12px;
+        z-index: 9999;
+        background: #10B981;
+        color: #fff;
+        padding: 8px 14px;
+        border-radius: 0 0 8px 8px;
+        font-weight: 600;
+        text-decoration: none;
+        font-family: -apple-system, sans-serif;
+        transition: top 0.15s;
+      }
+      .skip-nav:focus { top: 0; outline: 3px solid #fff; outline-offset: 2px; }
+    </style>
+  </head>
+  <body>
+    <!-- Skip navigation link for keyboard users (WCAG 2.4.1) -->
+    <a href="#main" class="skip-nav">Skip to main content</a>
+    <noscript>You need to enable JavaScript to run IPFMS.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

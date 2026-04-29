@@ -1,0 +1,50 @@
+/* Dashboard page — supplemental styles */
+
+/* ── Responsive KPI grid adjustments ──────────────────────────────────────── */
+@media (max-width: 1280px) {
+  .dashboard__kpi-row { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 560px) {
+  .dashboard__kpi-row { grid-template-columns: 1fr; }
+}
+
+/* ── Animated score ring ─────────────────────────────────────────────────── */
+@keyframes ring-in {
+  from { stroke-dashoffset: 339.29; }
+}
+.health-ring circle:last-child {
+  animation: ring-in 1s ease forwards;
+}
+
+/* ── Section dividers ───────────────────────────────────────────────────── */
+.dashboard__section-title {
+  font-size: 0.875rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-tertiary);
+  margin-bottom: 12px;
+}
+
+/* ── Advice list ─────────────────────────────────────────────────────────── */
+.advice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.advice-item {
+  display: flex;
+  gap: 10px;
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border-radius: var(--radius);
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.advice-item::before {
+  content: '💡';
+  flex-shrink: 0;
+  margin-top: 1px;
+}

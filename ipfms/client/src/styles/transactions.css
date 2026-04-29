@@ -1,0 +1,35 @@
+/* Transactions page — supplemental styles */
+
+.tx-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.tx-filters .form-group {
+  min-width: 130px;
+}
+
+.tx-flagged-icon {
+  color: var(--red);
+  margin-right: 6px;
+  font-size: 0.875rem;
+}
+
+/* Amount colours */
+.tx-amount--credit   { color: var(--accent); }
+.tx-amount--debit    { color: var(--red); }
+.tx-amount--transfer { color: var(--blue); }
+
+/* Sortable column header */
+.tx-sort-header {
+  cursor: pointer;
+  user-select: none;
+}
+.tx-sort-header:hover { color: var(--text-primary); }
+
+@media (max-width: 640px) {
+  .tx-filters { flex-direction: column; }
+  .tx-filters .form-group { min-width: 100%; }
+}

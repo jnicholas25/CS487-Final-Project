@@ -1,0 +1,73 @@
+/* IPFMS Design System — CSS Variables */
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  /* Core palette — dark (default) */
+  --bg-primary:    #0B0F1A;
+  --bg-secondary:  #111827;
+  --bg-card:       #1A2035;
+  --bg-card-hover: #1F2847;
+  --bg-elevated:   #232D45;
+  --bg-input:      #151C2E;
+  --border:        #2A3555;
+  --border-light:  #1E2A45;
+
+  /* Text */
+  --text-primary:   #F1F5F9;
+  --text-secondary: #94A3B8;
+  --text-tertiary:  #64748B;
+  --text-muted:     #475569;
+
+  /* Accent */
+  --accent:       #10B981;
+  --accent-hover: #34D399;
+  --accent-muted: rgba(16, 185, 129, 0.15);
+  --accent-text:  #6EE7B7;
+
+  /* Semantic colours */
+  --red:        #EF4444;
+  --red-muted:  rgba(239, 68, 68, 0.15);
+  --orange:     #F59E0B;
+  --orange-muted: rgba(245, 158, 11, 0.15);
+  --blue:       #3B82F6;
+  --blue-muted: rgba(59, 130, 246, 0.15);
+  --purple:     #8B5CF6;
+  --purple-muted: rgba(139, 92, 246, 0.15);
+  --teal:  #14B8A6;
+  --cyan:  #06B6D4;
+  --pink:  #EC4899;
+
+  /* Border-radius tokens */
+  --radius-sm: 6px;
+  --radius:    10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+
+  /* Typography */
+  --font:      'DM Sans', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.30);
+  --shadow:    0 4px 12px rgba(0,0,0,0.25);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.35);
+}
+
+/* ── Light theme overrides ──────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg-primary:    #F8FAFC;
+  --bg-secondary:  #FFFFFF;
+  --bg-card:       #FFFFFF;
+  --bg-card-hover: #F1F5F9;
+  --bg-elevated:   #F8FAFC;
+  --bg-input:      #F1F5F9;
+  --border:        #E2E8F0;
+  --border-light:  #F1F5F9;
+  --text-primary:   #0F172A;
+  --text-secondary: #475569;
+  --text-tertiary:  #94A3B8;
+  --text-muted:     #CBD5E1;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow:    0 4px 12px rgba(0,0,0,0.08);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,0.12);
+}

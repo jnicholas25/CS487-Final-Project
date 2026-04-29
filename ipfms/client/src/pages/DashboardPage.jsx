@@ -128,8 +128,21 @@ export default function DashboardPage() {
   };
 
   const health = scoreData;
-  const netWorthVal = netWorth
-    ? netWorth.bankTotal + netWorth.investmentTotal
+
+  // KPI derived values
+  const totalBalance    = netWorth?.bankTotal ?? null;
+  const monthlySpending = trend.length > 0 ? trend[trend.length - 1].total : null;
+  const prevSpending    = trend.length > 1 ? trend[trend.length - 2].total : null;
+  const spendingChangePct = (monthlySpending !== null && prevSpending && prevSpending > 0)
+    ? ((monthlySpending - prevSpending) / prevSpending) * 100
+    : null;
+
+  const activeBudget  = budgets.find((b) => b.isActive) || budgets[0] || null;
+  const budgetUsedPct = activeBudget && activeBudget.totalLimit > 0
+    ? Math.round((activeBudget.totalSpent / activeBudget.totalLimit) * 100)
+    : null;
+  const budgetRemaining = activeBudget
+    ? activeBudget.totalLimit - activeBudget.totalSpent
     : null;
 
   return (
@@ -155,24 +168,30 @@ export default function DashboardPage() {
         ) : (
           <>
             <KPICard
-              label="Net Worth"
-              value={netWorthVal !== null ? fmtCurrency(netWorthVal) : '—'}
+              label="Total Balance"
+              value={totalBalance !== null ? fmtCurrency(totalBalance) : '—'}
+              sub={netWorth ? `Investments: ${fmtCurrency(netWorth.investmentTotal)}` : null}
               colour="var(--accent)"
             />
             <KPICard
-              label="Bank Balance"
-              value={netWorth ? fmtCurrency(netWorth.bankTotal) : '—'}
+              label="Monthly Spending"
+              value={monthlySpending !== null ? fmtCurrency(monthlySpending) : '—'}
+              sub={spendingChangePct !== null
+                ? `${spendingChangePct > 0 ? '↑' : '↓'} ${Math.abs(spendingChangePct).toFixed(1)}% vs last month`
+                : null}
+              colour={spendingChangePct !== null && spendingChangePct < 0 ? 'var(--accent)' : 'var(--orange)'}
             />
             <KPICard
-              label="Investments"
-              value={netWorth ? fmtCurrency(netWorth.investmentTotal) : '—'}
-              colour="var(--blue)"
+              label="Budget Used"
+              value={budgetUsedPct !== null ? `${budgetUsedPct}%` : '—'}
+              sub={budgetRemaining !== null ? `${fmtCurrency(budgetRemaining)} remaining` : null}
+              colour={budgetUsedPct !== null && budgetUsedPct >= 90 ? 'var(--red)' : budgetUsedPct >= 75 ? 'var(--orange)' : 'var(--text-primary)'}
             />
             <KPICard
-              label="Active Budgets"
-              value={budgets.length}
-              sub={`${budgets.filter((b) => (b.spent / b.amount) >= 1).length} over limit`}
-              colour="var(--orange)"
+              label="Health Score"
+              value={scoreLoading ? '…' : (health?.score ?? '—')}
+              sub={health ? `↑ ${health.label} standing` : null}
+              colour={health?.score >= 80 ? 'var(--accent)' : health?.score >= 65 ? 'var(--orange)' : 'var(--red)'}
             />
           </>
         )}
@@ -290,19 +309,19 @@ export default function DashboardPage() {
           </div>
           {loading ? (
             <div className="loading-center"><span className="spinner" /></div>
-          ) : budgets.length === 0 ? (
+          ) : !activeBudget || !activeBudget.categories?.length ? (
             <div className="empty-state"><p>No budgets set up yet.</p></div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-              {budgets.slice(0, 5).map((b) => {
-                const pct = b.amount > 0 ? Math.min(100, (b.spent / b.amount) * 100) : 0;
+              {activeBudget.categories.slice(0, 5).map((cat) => {
+                const pct = cat.limit > 0 ? Math.min(100, (cat.spent / cat.limit) * 100) : 0;
                 const colour = pct >= 100 ? 'var(--red)' : pct >= 80 ? 'var(--orange)' : 'var(--accent)';
                 return (
-                  <div key={b._id}>
+                  <div key={cat._id || cat.category}>
                     <div className="flex-between gap-8" style={{ marginBottom: 6 }}>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{b.category}</span>
-                      <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                        {fmtCurrency(b.spent)} / {fmtCurrency(b.amount)}
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500, textTransform: 'capitalize' }}>{cat.category}</span>
+                      <span style={{ fontSize: '0.8125rem', color: pct >= 100 ? 'var(--red)' : 'var(--text-secondary)' }}>
+                        {fmtCurrency(cat.spent)} / {fmtCurrency(cat.limit)}
                       </span>
                     </div>
                     <div className="progress-track">

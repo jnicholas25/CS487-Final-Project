@@ -9,8 +9,8 @@ export const authService = {
     const firstName = parts[0] || name.trim();
     const lastName = parts.slice(1).join(' ') || firstName;
     const { data } = await api.post('/auth/register', { firstName, lastName, email, password });
-    // Server: { success, data: { user, tokens: { accessToken, refreshToken } } }
-    return { user: data.data.user, token: data.data.tokens.accessToken };
+    // After interceptor unwrap: data = { user, tokens: { accessToken, refreshToken } }
+    return { user: data.user, token: data.tokens.accessToken };
   },
 
   /** Login with email + password */
@@ -20,14 +20,14 @@ export const authService = {
     if (data.requiresTwoFactor) {
       return { requires2FA: true, tempToken: data.tempToken };
     }
-    return { user: data.data.user, token: data.data.tokens.accessToken };
+    return { user: data.user, token: data.tokens.accessToken };
   },
 
   /** Verify a 2FA TOTP code */
   verify2FA: async ({ tempToken, code }) => {
     const { data } = await api.post('/auth/2fa/verify', { tempToken, totpCode: code });
-    // Server: { data: { user, tokens } }
-    return { user: data.data.user, token: data.data.tokens.accessToken };
+    // After interceptor unwrap: data = { user, tokens }
+    return { user: data.user, token: data.tokens.accessToken };
   },
 
   /** Setup 2FA — returns QR code URI */

@@ -1,3 +1,4 @@
+'use strict';
 const express = require('express');
 const router = express.Router();
 
@@ -9,8 +10,7 @@ const paymentRoutes     = require('./paymentRoutes');      // Step 6
 const alertRoutes       = require('./alertRoutes');        // Step 5
 const investmentRoutes  = require('./investmentRoutes');   // Step 7
 const reportRoutes      = require('./reportRoutes');       // Step 7
-// Step 8+: uncomment as each feature is built
-// const healthScoreRoutes = require('./healthScoreRoutes');
+const healthScoreRoutes = require('./healthScoreRoutes');  // Step 8
 
 // ── Mount routes ──────────────────────────────────────────────────────────────
 router.use('/auth',         authRoutes);
@@ -20,6 +20,6 @@ router.use('/payments',     paymentRoutes);
 router.use('/alerts',       alertRoutes);
 router.use('/investments',  investmentRoutes);
 router.use('/reports',      reportRoutes);
-// router.use('/health-score', healthScoreRoutes);
+router.use('/health-score', healthScoreRoutes);
 
 module.exports = router;

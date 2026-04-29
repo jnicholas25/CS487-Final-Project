@@ -2,14 +2,15 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { toast }                from 'react-toastify';
 import { useTransactions }      from '../hooks/useTransactions';
 import { fmtCurrency }          from '../utils/formatCurrency';
-import { fmtDate, startOfCurrentMonth, endOfCurrentMonth } from '../utils/dateHelpers';
+import { fmtShortDate, startOfCurrentMonth, endOfCurrentMonth } from '../utils/dateHelpers';
 import { CATEGORY_LABELS, CATEGORIES } from '../constants/categories';
 import ErrorMessage             from '../components/common/ErrorMessage';
 import ConfirmDialog            from '../components/common/ConfirmDialog';
-import { RowSkeleton }          from '../components/common/LoadingSkeleton';
+
+const today = () => new Date().toISOString().split('T')[0];
 
 const EMPTY_FORM = {
-  description: '', amount: '', date: '', type: 'debit',
+  description: '', amount: '', date: today(), type: 'debit',
   category: 'other', accountId: '',
 };
 
@@ -22,19 +23,28 @@ export default function TransactionsPage() {
     type:      '',
     category:  '',
     search:    '',
+    isFlagged: '',
     page:      1,
   });
-  const [showForm,   setShowForm]   = useState(false);
-  const [form,       setForm]       = useState(EMPTY_FORM);
-  const [saving,     setSaving]     = useState(false);
-  const [confirmId,  setConfirmId]  = useState(null);
-  const [sortDir,    setSortDir]    = useState('desc');
+  const [showForm,  setShowForm]  = useState(false);
+  const [form,      setForm]      = useState(EMPTY_FORM);
+  const [saving,    setSaving]    = useState(false);
+  const [confirmId, setConfirmId] = useState(null);
 
   const load = useCallback(() => {
-    fetch({ ...filters, sort: `-date` });
+    fetch({ ...filters, sort: '-date' });
   }, [filters, fetch]);
 
   useEffect(() => { load(); }, [load]);
+
+  // Auto-populate accountId from first loaded transaction so the form can submit
+  useEffect(() => {
+    if (transactions.length > 0 && !form.accountId) {
+      const first = transactions[0];
+      const id = first.accountId?._id || first.accountId;
+      if (id) setForm((f) => ({ ...f, accountId: id.toString() }));
+    }
+  }, [transactions]); // eslint-disable-line
 
   const handleFilterChange = (key, val) =>
     setFilters((f) => ({ ...f, [key]: val, page: 1 }));
@@ -44,11 +54,12 @@ export default function TransactionsPage() {
     if (!form.description.trim()) { toast.error('Description is required'); return; }
     if (!form.amount || isNaN(form.amount)) { toast.error('Valid amount is required'); return; }
     if (!form.date) { toast.error('Date is required'); return; }
+    if (!form.accountId) { toast.error('No account found — seed data first or wait for transactions to load'); return; }
     setSaving(true);
     try {
       await create({ ...form, amount: parseFloat(form.amount) });
       toast.success('Transaction added');
-      setForm(EMPTY_FORM);
+      setForm((f) => ({ ...f, description: '', amount: '', date: today() }));
       setShowForm(false);
     } catch (err) {
       toast.error(err.message || 'Failed to add transaction');
@@ -68,192 +79,207 @@ export default function TransactionsPage() {
     }
   };
 
+  const totalShowing = transactions.length;
+  const totalCount   = pagination?.total ?? totalShowing;
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      {/* Header */}
-      <div className="flex-between">
-        <div>
-          <h2 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Transactions</h2>
-          {pagination && (
-            <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-              {pagination.total} total
-            </p>
-          )}
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* Page title */}
+      <h2 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Transactions</h2>
+
+      {/* Filter bar — all controls on one row */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ flex: 1, minWidth: 220, position: 'relative' }}>
+          <span style={{
+            position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)',
+            color: 'var(--text-tertiary)', fontSize: '0.875rem', pointerEvents: 'none',
+          }}>🔍</span>
+          <input
+            type="search"
+            className="form-input"
+            placeholder="Search transactions…"
+            value={filters.search}
+            onChange={(e) => handleFilterChange('search', e.target.value)}
+            style={{ paddingLeft: 32 }}
+          />
         </div>
-        <button className="btn btn-primary" onClick={() => setShowForm((s) => !s)}>
+        <select className="form-select" value={filters.category} style={{ minWidth: 145 }}
+          onChange={(e) => handleFilterChange('category', e.target.value)}>
+          <option value="">All Categories</option>
+          {CATEGORIES.map((c) => (
+            <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>
+          ))}
+        </select>
+        <select className="form-select" value={filters.type} style={{ minWidth: 115 }}
+          onChange={(e) => handleFilterChange('type', e.target.value)}>
+          <option value="">All Types</option>
+          <option value="debit">Debit</option>
+          <option value="credit">Credit</option>
+          <option value="transfer">Transfer</option>
+        </select>
+        <button
+          className={`btn ${filters.isFlagged === 'true' ? 'btn-primary' : 'btn-secondary'}`}
+          style={{ fontSize: '0.8125rem', whiteSpace: 'nowrap' }}
+          onClick={() => handleFilterChange('isFlagged', filters.isFlagged === 'true' ? '' : 'true')}>
+          ⚑ Flagged
+        </button>
+        <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}
+          onClick={() => setShowForm((s) => !s)}>
           {showForm ? '✕ Cancel' : '+ Add Transaction'}
         </button>
       </div>
 
-      {/* Add form */}
+      {/* Compact inline add form */}
       {showForm && (
-        <div className="card">
-          <h3 style={{ marginBottom: 16, fontSize: '0.9375rem', fontWeight: 600 }}>New Transaction</h3>
+        <div className="card" style={{ padding: '14px 16px', border: '1px solid var(--accent)' }}>
           <form onSubmit={handleSubmit}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 16 }}>
-              <div className="form-group">
-                <label className="form-label" htmlFor="desc">Description *</label>
-                <input id="desc" className="form-input" value={form.description}
-                  onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="e.g. Grocery run" />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="amt">Amount ($) *</label>
-                <input id="amt" type="number" step="0.01" className="form-input" value={form.amount}
-                  onChange={(e) => setForm({ ...form, amount: e.target.value })} placeholder="0.00" />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="txdate">Date *</label>
-                <input id="txdate" type="date" className="form-input" value={form.date}
-                  onChange={(e) => setForm({ ...form, date: e.target.value })} />
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="txtype">Type</label>
-                <select id="txtype" className="form-select" value={form.type}
-                  onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                  <option value="debit">Debit</option>
-                  <option value="credit">Credit</option>
-                  <option value="transfer">Transfer</option>
-                </select>
-              </div>
-              <div className="form-group">
-                <label className="form-label" htmlFor="txcat">Category</label>
-                <select id="txcat" className="form-select" value={form.category}
-                  onChange={(e) => setForm({ ...form, category: e.target.value })}>
-                  {CATEGORIES.map((c) => (
-                    <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button type="submit" className="btn btn-primary" disabled={saving}>
-                {saving ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Saving…</> : 'Save Transaction'}
+            <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                className="form-input" style={{ flex: 3, minWidth: 160 }}
+                placeholder="e.g. Coffee Shop"
+                value={form.description}
+                onChange={(e) => setForm({ ...form, description: e.target.value })}
+              />
+              <input
+                type="number" step="0.01" className="form-input" style={{ flex: 1, minWidth: 90 }}
+                placeholder="Amount ($)"
+                value={form.amount}
+                onChange={(e) => setForm({ ...form, amount: e.target.value })}
+              />
+              <select className="form-select" style={{ flex: 1.5, minWidth: 130 }}
+                value={form.category}
+                onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                {CATEGORIES.map((c) => (
+                  <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>
+                ))}
+              </select>
+              <input
+                type="date" className="form-input" style={{ flex: 1.2, minWidth: 130 }}
+                value={form.date}
+                onChange={(e) => setForm({ ...form, date: e.target.value })}
+              />
+              <button type="submit" className="btn btn-primary" disabled={saving} style={{ flexShrink: 0 }}>
+                {saving ? <span className="spinner" style={{ width: 14, height: 14 }} /> : 'Save'}
               </button>
-              <button type="button" className="btn btn-secondary" onClick={() => setShowForm(false)}>Cancel</button>
             </div>
           </form>
         </div>
       )}
 
-      {/* Filters */}
-      <div className="card" style={{ padding: '14px 20px' }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'flex-end' }}>
-          <div className="form-group" style={{ minWidth: 130 }}>
-            <label className="form-label">From</label>
-            <input type="date" className="form-input" value={filters.startDate}
-              onChange={(e) => handleFilterChange('startDate', e.target.value)} />
-          </div>
-          <div className="form-group" style={{ minWidth: 130 }}>
-            <label className="form-label">To</label>
-            <input type="date" className="form-input" value={filters.endDate}
-              onChange={(e) => handleFilterChange('endDate', e.target.value)} />
-          </div>
-          <div className="form-group" style={{ minWidth: 120 }}>
-            <label className="form-label">Type</label>
-            <select className="form-select" value={filters.type}
-              onChange={(e) => handleFilterChange('type', e.target.value)}>
-              <option value="">All types</option>
-              <option value="debit">Debit</option>
-              <option value="credit">Credit</option>
-              <option value="transfer">Transfer</option>
-            </select>
-          </div>
-          <div className="form-group" style={{ minWidth: 150 }}>
-            <label className="form-label">Category</label>
-            <select className="form-select" value={filters.category}
-              onChange={(e) => handleFilterChange('category', e.target.value)}>
-              <option value="">All categories</option>
-              {CATEGORIES.map((c) => (
-                <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group" style={{ flex: 1, minWidth: 160 }}>
-            <label className="form-label">Search</label>
-            <input type="search" className="form-input" placeholder="Description…"
-              value={filters.search}
-              onChange={(e) => handleFilterChange('search', e.target.value)} />
-          </div>
-        </div>
-      </div>
-
       {error && <ErrorMessage message={error} onRetry={load} />}
 
-      {/* Table */}
+      {/* Transactions table */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
         <table className="data-table" aria-label="Transactions list">
           <thead>
             <tr>
+              <th style={{ width: 90 }}>Date</th>
               <th>Description</th>
               <th>Category</th>
-              <th>Type</th>
-              <th
-                style={{ cursor: 'pointer', userSelect: 'none' }}
-                onClick={() => setSortDir((d) => d === 'desc' ? 'asc' : 'desc')}
-                aria-sort={sortDir === 'desc' ? 'descending' : 'ascending'}
-              >
-                Date {sortDir === 'desc' ? '↓' : '↑'}
-              </th>
+              <th>Account</th>
               <th className="text-right">Amount</th>
-              <th className="text-right">Actions</th>
+              <th style={{ width: 100 }}>Status</th>
             </tr>
           </thead>
           <tbody>
             {loading
-              ? Array.from({ length: 5 }).map((_, i) => <RowSkeleton key={i} cols={6} />)
+              ? Array.from({ length: 8 }).map((_, i) => (
+                <tr key={i}>
+                  {[90, '40%', '12%', '12%', 80, 80].map((w, j) => (
+                    <td key={j} style={{ padding: '14px 16px' }}>
+                      <span className="skeleton" style={{ display: 'block', height: 13,
+                        width: typeof w === 'string' ? w : w, borderRadius: 4 }} />
+                    </td>
+                  ))}
+                </tr>
+              ))
               : transactions.length === 0
               ? (
                 <tr>
-                  <td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-tertiary)' }}>
+                  <td colSpan={6} style={{ textAlign: 'center', padding: 48, color: 'var(--text-tertiary)' }}>
                     No transactions found.
                   </td>
                 </tr>
               )
-              : transactions.map((tx) => (
-                <tr key={tx._id}>
-                  <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
-                    {tx.isFlagged && <span title="Flagged" style={{ color: 'var(--red)', marginRight: 6 }}>⚑</span>}
-                    {tx.description}
-                  </td>
-                  <td>
-                    <span className="badge badge-neutral">{CATEGORY_LABELS[tx.category] || tx.category}</span>
-                  </td>
-                  <td>
-                    <span className={`badge ${tx.type === 'credit' ? 'badge-success' : tx.type === 'transfer' ? 'badge-info' : 'badge-neutral'}`}>
-                      {tx.type}
-                    </span>
-                  </td>
-                  <td>{fmtDate(tx.date)}</td>
-                  <td className="text-right mono"
-                    style={{ color: tx.type === 'credit' ? 'var(--accent)' : tx.amount < 0 ? 'var(--red)' : 'var(--text-primary)' }}>
-                    {tx.type === 'credit' ? '+' : '-'}{fmtCurrency(tx.amount)}
-                  </td>
-                  <td className="text-right">
-                    <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: '0.8125rem', color: 'var(--red)' }}
-                      onClick={() => setConfirmId(tx._id)}
-                      aria-label={`Delete transaction: ${tx.description}`}>
-                      ✕
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              : transactions.map((tx) => {
+                const accountName = tx.accountId?.name || '—';
+                const isCredit    = tx.type === 'credit';
+                return (
+                  <tr key={tx._id}
+                    style={{ cursor: 'pointer' }}
+                    onDoubleClick={() => setConfirmId(tx._id)}
+                    title="Double-click to delete">
+                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.875rem', whiteSpace: 'nowrap' }}>
+                      {fmtShortDate(tx.date)}
+                    </td>
+                    <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>
+                      {tx.description}
+                      {tx.isRecurring && (
+                        <span className="badge badge-info"
+                          style={{ marginLeft: 6, fontSize: '0.65rem', verticalAlign: 'middle' }}>REC</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className="badge badge-neutral">
+                        {CATEGORY_LABELS[tx.category] || tx.category || 'other'}
+                      </span>
+                    </td>
+                    <td style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>
+                      {accountName}
+                    </td>
+                    <td className="text-right mono"
+                      style={{ color: isCredit ? 'var(--accent)' : 'var(--red)', fontWeight: 600 }}>
+                      {isCredit ? '+' : '-'}{fmtCurrency(Math.abs(tx.amount))}
+                    </td>
+                    <td>
+                      {tx.isFlagged
+                        ? <span className="badge badge-danger" style={{ fontSize: '0.7rem' }}>FLAGGED</span>
+                        : tx.isPending
+                        ? <span className="badge badge-warning" style={{ fontSize: '0.7rem' }}>PENDING</span>
+                        : <span style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '1rem' }}>✓</span>
+                      }
+                    </td>
+                  </tr>
+                );
+              })}
           </tbody>
         </table>
 
-        {/* Pagination */}
-        {pagination && pagination.pages > 1 && (
-          <div className="flex-center gap-8" style={{ padding: '14px 20px', borderTop: '1px solid var(--border)', justifyContent: 'flex-end' }}>
-            <button className="btn btn-secondary" disabled={filters.page <= 1}
-              onClick={() => handleFilterChange('page', filters.page - 1)}>← Prev</button>
-            <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-              Page {filters.page} of {pagination.pages}
-            </span>
-            <button className="btn btn-secondary" disabled={filters.page >= pagination.pages}
-              onClick={() => handleFilterChange('page', filters.page + 1)}>Next →</button>
-          </div>
-        )}
+        {/* Footer */}
+        <div style={{
+          padding: '12px 20px', borderTop: '1px solid var(--border)',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8,
+        }}>
+          <span style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+            Showing {totalShowing} of {totalCount} transactions
+          </span>
+          {pagination && pagination.pages > 1 && (
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button className="btn btn-secondary" style={{ padding: '4px 10px' }}
+                disabled={filters.page <= 1}
+                onClick={() => handleFilterChange('page', filters.page - 1)}>←</button>
+              {Array.from({ length: pagination.pages }, (_, i) => i + 1)
+                .filter((p) => p === 1 || p === pagination.pages || Math.abs(p - filters.page) <= 1)
+                .map((p, idx, arr) => (
+                  <React.Fragment key={p}>
+                    {idx > 0 && arr[idx - 1] !== p - 1 && (
+                      <span style={{ padding: '4px 4px', color: 'var(--text-tertiary)', lineHeight: '28px' }}>…</span>
+                    )}
+                    <button
+                      className={`btn ${p === filters.page ? 'btn-primary' : 'btn-secondary'}`}
+                      style={{ padding: '4px 10px', minWidth: 36 }}
+                      onClick={() => handleFilterChange('page', p)}>{p}</button>
+                  </React.Fragment>
+                ))}
+              <button className="btn btn-secondary" style={{ padding: '4px 10px' }}
+                disabled={filters.page >= pagination.pages}
+                onClick={() => handleFilterChange('page', filters.page + 1)}>→</button>
+            </div>
+          )}
+        </div>
       </div>
 
+      {/* Delete confirm — triggered by double-click on row */}
       {confirmId && (
         <ConfirmDialog
           title="Delete Transaction"

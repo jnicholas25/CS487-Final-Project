@@ -10,6 +10,18 @@ import { CATEGORIES, CATEGORY_LABELS } from '../constants/categories';
 const FREQUENCIES = ['daily','weekly','bi-weekly','monthly','quarterly','annually'];
 const EMPTY_FORM  = { name: '', amount: '', frequency: 'monthly', nextDueDate: '', category: 'other', description: '' };
 
+function toMonthlyAmount(amount, frequency) {
+  switch (frequency) {
+    case 'daily':     return amount * 30;
+    case 'weekly':    return amount * 4.33;
+    case 'bi-weekly': return amount * 2.17;
+    case 'monthly':   return amount;
+    case 'quarterly': return amount / 3;
+    case 'annually':  return amount / 12;
+    default:          return amount;
+  }
+}
+
 export default function AutopaymentsPage() {
   const [payments,  setPayments]  = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -64,27 +76,62 @@ export default function AutopaymentsPage() {
     finally { setProcessing(false); }
   };
 
-  const statusColour = (s) => s === 'active' ? 'var(--accent)' : s === 'paused' ? 'var(--orange)' : 'var(--text-muted)';
+  // KPI derived values
+  const activePayments = payments.filter((p) => p.status === 'active');
+  const monthlyObligations = activePayments.reduce(
+    (sum, p) => sum + toMonthlyAmount(p.amount, p.frequency), 0
+  );
+  const nextDue = activePayments
+    .filter((p) => p.nextDueDate)
+    .sort((a, b) => new Date(a.nextDueDate) - new Date(b.nextDueDate))[0] || null;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Header */}
       <div className="flex-between">
         <div>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Scheduled Payments</h2>
-          <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: 2 }}>
-            {payments.filter((p) => p.status === 'active').length} active
-          </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <button className="btn btn-secondary" onClick={handleProcess} disabled={processing}>
             {processing ? <><span className="spinner" style={{ width: 14, height: 14 }} /> Processing…</> : '⟳ Run Now'}
           </button>
           <button className="btn btn-primary" onClick={() => setShowForm((s) => !s)}>
-            {showForm ? '✕ Cancel' : '+ New Payment'}
+            {showForm ? '✕ Cancel' : '+ Schedule Payment'}
           </button>
         </div>
       </div>
 
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16 }}>
+        <div className="card">
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: 6 }}>Monthly Obligations</p>
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--red)' }}>{fmtCurrency(monthlyObligations)}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 4 }}>estimated / month</p>
+        </div>
+        <div className="card">
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: 6 }}>Active Payments</p>
+          <p style={{ fontSize: '1.5rem', fontWeight: 700, color: 'var(--accent)' }}>{activePayments.length}</p>
+          <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 4 }}>
+            {payments.length} total
+          </p>
+        </div>
+        <div className="card">
+          <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: 6 }}>Next Due</p>
+          {nextDue ? (
+            <>
+              <p style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>{nextDue.name}</p>
+              <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                {fmtDate(nextDue.nextDueDate)} · {fmtCurrency(nextDue.amount)}
+              </p>
+            </>
+          ) : (
+            <p style={{ fontSize: '1.25rem', fontWeight: 700 }}>—</p>
+          )}
+        </div>
+      </div>
+
+      {/* Create Form */}
       {showForm && (
         <div className="card">
           <h3 style={{ marginBottom: 16, fontWeight: 600 }}>New Scheduled Payment</h3>
@@ -92,7 +139,8 @@ export default function AutopaymentsPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(170px, 1fr))', gap: 12, marginBottom: 16 }}>
               <div className="form-group">
                 <label className="form-label">Name *</label>
-                <input className="form-input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Netflix" />
+                <input className="form-input" value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="Netflix" />
               </div>
               <div className="form-group">
                 <label className="form-label">Amount ($) *</label>
@@ -106,13 +154,15 @@ export default function AutopaymentsPage() {
               </div>
               <div className="form-group">
                 <label className="form-label">Frequency</label>
-                <select className="form-select" value={form.frequency} onChange={(e) => setForm({ ...form, frequency: e.target.value })}>
+                <select className="form-select" value={form.frequency}
+                  onChange={(e) => setForm({ ...form, frequency: e.target.value })}>
                   {FREQUENCIES.map((f) => <option key={f} value={f}>{f.replace('-', ' ')}</option>)}
                 </select>
               </div>
               <div className="form-group">
                 <label className="form-label">Category</label>
-                <select className="form-select" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
+                <select className="form-select" value={form.category}
+                  onChange={(e) => setForm({ ...form, category: e.target.value })}>
                   {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>)}
                 </select>
               </div>
@@ -129,46 +179,79 @@ export default function AutopaymentsPage() {
 
       {error && <ErrorMessage message={error} onRetry={load} />}
 
+      {/* Payment List */}
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table className="data-table" aria-label="Scheduled payments">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Category</th>
-              <th>Frequency</th>
-              <th>Next Due</th>
-              <th>Status</th>
-              <th className="text-right">Amount</th>
-              <th className="text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {loading
-              ? Array.from({ length: 4 }).map((_, i) => (
-                <tr key={i}>{Array.from({ length: 7 }).map((__, j) => (
-                  <td key={j} style={{ padding: '12px 14px' }}>
-                    <span className="skeleton" style={{ display: 'block', height: 13, width: '70%', borderRadius: 4 }} />
-                  </td>
-                ))}</tr>
-              ))
-              : payments.length === 0
-              ? (<tr><td colSpan={7} style={{ textAlign: 'center', padding: 40, color: 'var(--text-tertiary)' }}>No scheduled payments.</td></tr>)
-              : payments.map((p) => (
-                <tr key={p._id}>
-                  <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{p.name}</td>
-                  <td><span className="badge badge-neutral">{CATEGORY_LABELS[p.category] || p.category}</span></td>
-                  <td style={{ color: 'var(--text-secondary)', textTransform: 'capitalize' }}>{p.frequency}</td>
-                  <td>{fmtDate(p.nextDueDate)}</td>
-                  <td><span style={{ color: statusColour(p.status), fontWeight: 600, fontSize: '0.8125rem' }}>{p.status}</span></td>
-                  <td className="text-right mono">{fmtCurrency(p.amount)}</td>
-                  <td className="text-right">
-                    <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: '0.8125rem', color: 'var(--red)' }}
-                      onClick={() => setConfirmId(p._id)} aria-label={`Cancel ${p.name}`}>Cancel</button>
-                  </td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+        {loading ? (
+          <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {[1,2,3].map((i) => (
+              <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'center' }}>
+                <span className="skeleton" style={{ width: 44, height: 44, borderRadius: '50%', flexShrink: 0 }} />
+                <div style={{ flex: 1 }}>
+                  <span className="skeleton" style={{ display: 'block', height: 14, width: '40%', borderRadius: 4, marginBottom: 6 }} />
+                  <span className="skeleton" style={{ display: 'block', height: 12, width: '60%', borderRadius: 4 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : payments.length === 0 ? (
+          <div className="empty-state" style={{ padding: 40 }}>
+            <p>No scheduled payments.</p>
+          </div>
+        ) : (
+          <div>
+            {payments.map((p, idx) => {
+              const isActive = p.status === 'active';
+              const initial  = (p.name || '?')[0].toUpperCase();
+              const avatarBg = isActive ? 'var(--accent)' : 'var(--bg-elevated)';
+              const avatarFg = isActive ? '#fff' : 'var(--text-secondary)';
+              return (
+                <div key={p._id} style={{
+                  display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px',
+                  borderBottom: idx < payments.length - 1 ? '1px solid var(--border)' : 'none',
+                }}>
+                  {/* Avatar */}
+                  <div style={{
+                    width: 44, height: 44, borderRadius: '50%', background: avatarBg,
+                    color: avatarFg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontWeight: 700, fontSize: '1rem', flexShrink: 0,
+                  }}>
+                    {initial}
+                  </div>
+
+                  {/* Info */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9375rem' }}>
+                        {p.name}
+                      </span>
+                      <span className={`badge ${isActive ? 'badge-success' : 'badge-neutral'}`}
+                        style={{ fontSize: '0.65rem', textTransform: 'uppercase' }}>
+                        {p.status}
+                      </span>
+                    </div>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                      {CATEGORY_LABELS[p.category] || p.category} · {(p.frequency || '').replace('-', ' ')}
+                    </p>
+                  </div>
+
+                  {/* Amount + due */}
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <p style={{ fontWeight: 700, fontSize: '0.9375rem', color: 'var(--text-primary)', marginBottom: 3 }}>
+                      {fmtCurrency(p.amount)}
+                    </p>
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                      Due {fmtDate(p.nextDueDate)}
+                    </p>
+                  </div>
+
+                  {/* Action */}
+                  <button className="btn btn-ghost" style={{ padding: '4px 8px', fontSize: '0.8125rem', color: 'var(--red)', flexShrink: 0 }}
+                    onClick={() => setConfirmId(p._id)} aria-label={`Cancel ${p.name}`}>Cancel</button>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {confirmId && (

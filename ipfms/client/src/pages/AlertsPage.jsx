@@ -4,11 +4,11 @@ import useAlerts      from '../hooks/useAlerts';
 import { fmtDate, fmtRelative } from '../utils/dateHelpers';
 import ErrorMessage   from '../components/common/ErrorMessage';
 
-const SEVERITY_STYLES = {
-  critical: { bg: 'var(--red-muted)',    border: 'rgba(239,68,68,0.25)',   text: 'var(--red)',    badge: 'badge-danger'  },
-  high:     { bg: 'var(--orange-muted)', border: 'rgba(245,158,11,0.25)', text: 'var(--orange)', badge: 'badge-warning' },
-  medium:   { bg: 'var(--blue-muted)',   border: 'rgba(59,130,246,0.25)', text: 'var(--blue)',   badge: 'badge-info'    },
-  low:      { bg: 'var(--bg-elevated)',  border: 'var(--border)',         text: 'var(--text-secondary)', badge: 'badge-neutral' },
+const SEVERITY_CONFIG = {
+  critical: { border: 'var(--red)',    badge: 'badge-danger',  label: 'CRITICAL', statusLabel: 'HIGH' },
+  high:     { border: 'var(--red)',    badge: 'badge-danger',  label: 'HIGH',     statusLabel: 'HIGH' },
+  medium:   { border: 'var(--orange)', badge: 'badge-warning', label: 'MEDIUM',   statusLabel: 'MEDIUM' },
+  low:      { border: '#3B82F6',       badge: 'badge-info',    label: 'LOW',      statusLabel: 'LOW' },
 };
 
 function ResolveModal({ alert, onResolve, onClose }) {
@@ -91,6 +91,7 @@ export default function AlertsPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Header */}
       <div className="flex-between">
         <div>
           <h2 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Anomaly Alerts</h2>
@@ -99,7 +100,7 @@ export default function AlertsPage() {
           </p>
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
-          <select className="form-select" style={{ width: 130 }} value={statusFilter}
+          <select className="form-select" style={{ width: 140 }} value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All statuses</option>
             <option value="active">Active</option>
@@ -126,41 +127,65 @@ export default function AlertsPage() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {alerts.map((a) => {
-            const sty = SEVERITY_STYLES[a.severity] || SEVERITY_STYLES.low;
+            const cfg     = SEVERITY_CONFIG[a.severity] || SEVERITY_CONFIG.low;
+            const statusBadge = a.status === 'resolved'   ? { cls: 'badge-success', text: 'RESOLVED' }
+                              : a.status === 'dismissed'  ? { cls: 'badge-neutral',  text: 'DISMISSED' }
+                              : a.acknowledgedAt          ? { cls: 'badge-info',     text: 'ACKNOWLEDGED' }
+                              :                             { cls: 'badge-warning',   text: 'OPEN' };
             return (
               <div key={a._id} style={{
-                background: sty.bg, border: `1px solid ${sty.border}`,
-                borderRadius: 'var(--radius-lg)', padding: '16px 20px',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border)',
+                borderLeft: `4px solid ${cfg.border}`,
+                borderRadius: 'var(--radius-lg)',
+                padding: '16px 20px',
               }}>
-                <div className="flex-between gap-8" style={{ marginBottom: 8, flexWrap: 'wrap' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span className={`badge ${sty.badge}`}>{a.severity}</span>
+                {/* Top row: badges + title + date */}
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 8, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                    <span className={`badge ${cfg.badge}`} style={{ fontSize: '0.7rem', textTransform: 'uppercase' }}>
+                      {cfg.label}
+                    </span>
+                    <span className={`badge ${statusBadge.cls}`} style={{ fontSize: '0.7rem' }}>
+                      {statusBadge.text}
+                    </span>
                     <span style={{ fontWeight: 600, color: 'var(--text-primary)', fontSize: '0.9375rem' }}>
                       {a.alertType?.replace(/_/g, ' ') || 'Anomaly'}
                     </span>
-                    {!a.acknowledgedAt && (
-                      <span className="badge badge-info" style={{ fontSize: '0.65rem' }}>NEW</span>
-                    )}
                   </div>
-                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)' }}>
+                  <span style={{ fontSize: '0.8125rem', color: 'var(--text-tertiary)', whiteSpace: 'nowrap' }}>
                     {fmtRelative(a.createdAt)}
                   </span>
                 </div>
-                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
+
+                {/* Description */}
+                <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 6 }}>
                   {a.description || `Z-score: ${a.metadata?.zScore?.toFixed(2) ?? '—'} | Amount: ${a.metadata?.amount ? `$${a.metadata.amount}` : '—'}`}
                 </p>
-                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+
+                {/* Recommendation */}
+                {a.recommendation && (
+                  <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginBottom: 10 }}>
+                    {a.recommendation}
+                  </p>
+                )}
+
+                {/* Actions row */}
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
                   {!a.acknowledgedAt && (
                     <button className="btn btn-secondary" style={{ fontSize: '0.8125rem' }}
                       onClick={() => handleAck(a._id)}>Mark Seen</button>
                   )}
-                  {a.status === 'active' || a.status === 'acknowledged' ? (
-                    <button className="btn btn-secondary" style={{ fontSize: '0.8125rem', color: sty.text }}
+                  {(a.status === 'active' || a.status === 'acknowledged') && (
+                    <button className="btn btn-secondary" style={{ fontSize: '0.8125rem' }}
                       onClick={() => setResolveAlert(a)}>Resolve</button>
-                  ) : null}
+                  )}
+                  <div style={{ flex: 1 }} />
                   <button className="btn btn-ghost" style={{ fontSize: '0.8125rem', color: 'var(--text-muted)' }}
                     onClick={() => handleDismiss(a._id)}>Dismiss</button>
                 </div>
+
+                {/* Resolved info */}
                 {a.status === 'resolved' && a.feedback && (
                   <p style={{ fontSize: '0.75rem', color: 'var(--text-tertiary)', marginTop: 8 }}>
                     Resolved: {a.feedback.replace(/_/g, ' ')} · {fmtDate(a.resolvedAt)}

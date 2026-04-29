@@ -12,6 +12,9 @@ const apiRoutes = require('./src/routes/index');
 
 const app = express();
 
+// Trust the first proxy hop (needed for express-rate-limit with X-Forwarded-For)
+app.set('trust proxy', 1);
+
 // ── Security headers ──────────────────────────────────────────────────────────
 app.use(helmet());
 

@@ -81,7 +81,7 @@ async function spendingTrend(req, res, next) {
     const accountId = req.query.accountId || null;
 
     const data = await buildSpendingTrend(req.user._id, { months, accountId });
-    res.json({ success: true, data });
+    res.json({ success: true, data: { trend: data } });
   } catch (err) {
     next(err);
   }
@@ -101,7 +101,7 @@ async function categoryBreakdown(req, res, next) {
       accountId: accountId || null,
     });
 
-    res.json({ success: true, data });
+    res.json({ success: true, data: { breakdown: data } });
   } catch (err) {
     next(err);
   }
@@ -115,7 +115,7 @@ async function incomeVsExpense(req, res, next) {
   try {
     const months = parseInt(req.query.months, 10) || 6;
     const data   = await buildIncomeVsExpense(req.user._id, { months });
-    res.json({ success: true, data });
+    res.json({ success: true, data: { monthly: data } });
   } catch (err) {
     next(err);
   }

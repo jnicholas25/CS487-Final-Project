@@ -272,7 +272,8 @@ async function queryTransactions(userId, filters = {}) {
   const sort = { [sortBy]: sortOrder === 'asc' ? 1 : -1 };
 
   const [transactions, total] = await Promise.all([
-    Transaction.find(query).sort(sort).skip(skip).limit(Number(limit)),
+    Transaction.find(query).sort(sort).skip(skip).limit(Number(limit))
+      .populate('accountId', 'name institutionName accountType'),
     Transaction.countDocuments(query),
   ]);
 

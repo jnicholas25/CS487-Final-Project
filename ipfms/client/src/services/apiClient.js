@@ -18,9 +18,15 @@ api.interceptors.request.use(
   (err) => Promise.reject(err),
 );
 
-// ── Response interceptor — normalise errors ───────────────────────────────
+// ── Response interceptor — unwrap envelope + normalise errors ───────────────
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    // Unwrap standard { success: true, data: ... } envelope
+    if (res.data && res.data.success === true && 'data' in res.data) {
+      return { ...res, data: res.data.data };
+    }
+    return res;
+  },
   (err) => {
     const status = err.response?.status;
     const message =

@@ -141,7 +141,7 @@ const updateTransactionRules = [
  */
 const listTransactionRules = [
   query('accountId')
-    .optional()
+    .optional({ checkFalsy: true })
     .custom(isObjectId).withMessage(objectIdMsg),
 
   query('startDate')
@@ -157,7 +157,7 @@ const listTransactionRules = [
     .isString(),
 
   query('type')
-    .optional()
+    .optional({ checkFalsy: true })
     .isIn(['debit', 'credit', 'transfer', 'refund', 'fee'])
     .withMessage('Invalid transaction type'),
 

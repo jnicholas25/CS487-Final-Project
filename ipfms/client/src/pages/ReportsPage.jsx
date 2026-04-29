@@ -1,39 +1,53 @@
 import React, { useEffect, useState } from 'react';
-import { Doughnut, Bar } from 'react-chartjs-2';
+import { Bar } from 'react-chartjs-2';
 import {
-  Chart as ChartJS, ArcElement, BarElement, CategoryScale,
+  Chart as ChartJS, BarElement, CategoryScale,
   LinearScale, Tooltip, Legend,
 } from 'chart.js';
 import reportService       from '../services/reportService';
 import { fmtCurrency }    from '../utils/formatCurrency';
-import { startOfCurrentMonth, endOfCurrentMonth } from '../utils/dateHelpers';
 import { CATEGORY_COLORS } from '../constants/categories';
 import ErrorMessage        from '../components/common/ErrorMessage';
 
-ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
+
+const PERIODS = [
+  { label: '1 Month',  months: 1 },
+  { label: '3 Months', months: 3 },
+  { label: '6 Months', months: 6 },
+  { label: '1 Year',   months: 12 },
+];
+
+function getDateRange(months) {
+  const end   = new Date();
+  const start = new Date();
+  start.setMonth(start.getMonth() - months + 1);
+  start.setDate(1);
+  const fmt = (d) => d.toISOString().split('T')[0];
+  return { start: fmt(start), end: fmt(end) };
+}
 
 export default function ReportsPage() {
-  const [netWorth, setNetWorth] = useState(null);
-  const [breakdown, setBreakdown] = useState([]);
+  const [netWorth,    setNetWorth]    = useState(null);
+  const [breakdown,   setBreakdown]   = useState([]);
   const [incomeVsExp, setIncomeVsExp] = useState([]);
-  const [spending, setSpending] = useState(null);
-  const [income,   setIncome]   = useState(null);
-  const [loading,  setLoading]  = useState(true);
-  const [error,    setError]    = useState(null);
-  const [dateRange, setDateRange] = useState({
-    start: startOfCurrentMonth(),
-    end:   endOfCurrentMonth(),
-  });
+  const [spending,    setSpending]    = useState(null);
+  const [income,      setIncome]      = useState(null);
+  const [loading,     setLoading]     = useState(true);
+  const [error,       setError]       = useState(null);
+  const [activePeriod, setActivePeriod] = useState(1); // index into PERIODS
 
-  const load = async () => {
+  const load = async (periodIdx = activePeriod) => {
     setLoading(true); setError(null);
+    const { months } = PERIODS[periodIdx];
+    const { start, end } = getDateRange(months);
     try {
       const [nw, bd, ive, sp, inc] = await Promise.all([
         reportService.netWorth(),
-        reportService.categoryBreakdown({ startDate: dateRange.start, endDate: dateRange.end }),
-        reportService.incomeVsExpense({ months: 6 }),
-        reportService.spending({ startDate: dateRange.start, endDate: dateRange.end }),
-        reportService.income({ startDate: dateRange.start, endDate: dateRange.end }),
+        reportService.categoryBreakdown({ startDate: start, endDate: end }),
+        reportService.incomeVsExpense({ months }),
+        reportService.spending({ startDate: start, endDate: end }),
+        reportService.income({ startDate: start, endDate: end }),
       ]);
       setNetWorth(nw);
       setBreakdown(bd.breakdown || []);
@@ -46,102 +60,152 @@ export default function ReportsPage() {
 
   useEffect(() => { load(); }, []); // eslint-disable-line
 
-  // Doughnut data
-  const doughnutData = {
-    labels: breakdown.map((b) => b.category),
-    datasets: [{
-      data: breakdown.map((b) => b.total),
-      backgroundColor: CATEGORY_COLORS.slice(0, breakdown.length),
-      borderWidth: 0,
-      hoverOffset: 6,
-    }],
+  const handlePeriodChange = (idx) => {
+    setActivePeriod(idx);
+    load(idx);
   };
 
-  // Bar data
+  const handleExportPDF = () => {
+    window.print();
+  };
+
+  // Horizontal bar chart for category breakdown
+  const hBarData = {
+    labels: breakdown.slice(0, 8).map((b) => b.category),
+    datasets: [{
+      label: 'Spending',
+      data: breakdown.slice(0, 8).map((b) => b.total),
+      backgroundColor: CATEGORY_COLORS.slice(0, breakdown.length),
+      borderRadius: 4,
+    }],
+  };
+  const hBarOptions = {
+    indexAxis: 'y',
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: { callbacks: { label: (ctx) => ` ${fmtCurrency(ctx.raw)}` } },
+    },
+    scales: {
+      x: { grid: { color: 'rgba(42,53,85,0.5)' }, ticks: { color: '#64748B', callback: (v) => `$${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}` } },
+      y: { grid: { display: false }, ticks: { color: '#94A3B8', font: { size: 12 } } },
+    },
+  };
+
+  // Grouped bar chart for income vs expense
   const barData = {
     labels: incomeVsExp.map((m) => m.month),
     datasets: [
-      { label: 'Income',  data: incomeVsExp.map((m) => m.income),  backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 5 },
-      { label: 'Expense', data: incomeVsExp.map((m) => m.expense), backgroundColor: 'rgba(239,68,68,0.7)',  borderRadius: 5 },
+      { label: 'Income',  data: incomeVsExp.map((m) => m.income),  backgroundColor: 'rgba(16,185,129,0.7)', borderRadius: 4 },
+      { label: 'Expense', data: incomeVsExp.map((m) => m.expense), backgroundColor: 'rgba(239,68,68,0.7)',  borderRadius: 4 },
     ],
   };
   const barOptions = {
     responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'top', labels: { color: '#94A3B8', font: { size: 12 } } },
-      tooltip: { callbacks: { label: (ctx) => ` ${fmtCurrency(ctx.raw)}` }}},
+    plugins: {
+      legend: { position: 'top', labels: { color: '#94A3B8', font: { size: 12 } } },
+      tooltip: { callbacks: { label: (ctx) => ` ${fmtCurrency(ctx.raw)}` } },
+    },
     scales: {
       x: { grid: { display: false }, ticks: { color: '#64748B' } },
       y: { grid: { color: 'rgba(42,53,85,0.5)' }, ticks: { color: '#64748B', callback: (v) => `$${v >= 1000 ? (v/1000).toFixed(0)+'k' : v}` } },
     },
   };
 
+  // Net Worth Summary values
+  const bankTotal    = netWorth?.bankTotal ?? 0;
+  const investTotal  = netWorth?.investmentTotal ?? 0;
+  const totalSpend   = spending?.totalSpend ?? 0;
+  const totalIncome  = income?.totalIncome ?? 0;
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div className="flex-between">
+      {/* Header */}
+      <div className="flex-between" style={{ flexWrap: 'wrap', gap: 10 }}>
         <h2 style={{ fontSize: '1.125rem', fontWeight: 700 }}>Reports</h2>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-          <input type="date" className="form-input" style={{ width: 150 }} value={dateRange.start}
-            onChange={(e) => setDateRange((r) => ({ ...r, start: e.target.value }))} />
-          <span style={{ color: 'var(--text-tertiary)' }}>to</span>
-          <input type="date" className="form-input" style={{ width: 150 }} value={dateRange.end}
-            onChange={(e) => setDateRange((r) => ({ ...r, end: e.target.value }))} />
-          <button className="btn btn-primary" onClick={load}>Apply</button>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Period tabs */}
+          <div style={{ display: 'flex', background: 'var(--bg-elevated)', borderRadius: 'var(--radius)', padding: 4, gap: 2 }}>
+            {PERIODS.map((p, i) => (
+              <button key={p.label} onClick={() => handlePeriodChange(i)}
+                style={{
+                  padding: '6px 14px', border: 'none', cursor: 'pointer',
+                  borderRadius: 'var(--radius-sm)', fontSize: '0.8125rem', fontWeight: 500,
+                  background: activePeriod === i ? 'var(--bg-card)' : 'transparent',
+                  color: activePeriod === i ? 'var(--text-primary)' : 'var(--text-secondary)',
+                  boxShadow: activePeriod === i ? 'var(--shadow-sm)' : 'none',
+                  transition: 'background 0.15s, color 0.15s',
+                }}>
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <button className="btn btn-secondary" onClick={handleExportPDF} style={{ fontSize: '0.8125rem' }}>
+            Export PDF
+          </button>
         </div>
       </div>
 
-      {error && <ErrorMessage message={error} onRetry={load} />}
+      {error && <ErrorMessage message={error} onRetry={() => load()} />}
 
-      {/* Net Worth */}
-      {netWorth && (
+      {/* Net Worth Summary */}
+      <div className="card">
+        <h3 style={{ fontWeight: 600, marginBottom: 16, fontSize: '0.9375rem' }}>Net Worth Summary</h3>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 16 }}>
           {[
-            { label: 'Net Worth',   value: fmtCurrency(netWorth.bankTotal + netWorth.investmentTotal), colour: 'var(--accent)' },
-            { label: 'Bank Total',  value: fmtCurrency(netWorth.bankTotal) },
-            { label: 'Investments', value: fmtCurrency(netWorth.investmentTotal), colour: 'var(--blue)' },
-            { label: 'Total Spent', value: fmtCurrency(spending?.totalSpend || 0), colour: 'var(--red)' },
-            { label: 'Total Income',value: fmtCurrency(income?.totalIncome || 0), colour: 'var(--accent)' },
+            { label: 'Cash & Checking', value: fmtCurrency(bankTotal),   colour: 'var(--accent)' },
+            { label: 'Investments',     value: fmtCurrency(investTotal),  colour: '#3B82F6' },
+            { label: 'Total Income',    value: fmtCurrency(totalIncome),  colour: 'var(--accent)' },
+            { label: 'Total Spent',     value: fmtCurrency(totalSpend),   colour: 'var(--red)' },
+            { label: 'Net Worth',       value: fmtCurrency(bankTotal + investTotal), colour: 'var(--text-primary)' },
           ].map(({ label, value, colour }) => (
-            <div key={label} className="card">
+            <div key={label} style={{ padding: '14px 16px', background: 'var(--bg-elevated)', borderRadius: 'var(--radius)' }}>
               <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', marginBottom: 6 }}>{label}</p>
-              <p style={{ fontSize: '1.25rem', fontWeight: 700, color: colour || 'var(--text-primary)' }}>{value}</p>
+              <p style={{ fontSize: '1.25rem', fontWeight: 700, color: colour }}>{value}</p>
             </div>
           ))}
         </div>
-      )}
+      </div>
 
       {/* Charts */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.5fr', gap: 16 }}>
-        {/* Category breakdown */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.4fr', gap: 16 }}>
+        {/* Spending by Category — horizontal bars */}
         <div className="card">
-          <h3 style={{ fontWeight: 600, marginBottom: 16 }}>Spending by Category</h3>
+          <h3 style={{ fontWeight: 600, marginBottom: 16, fontSize: '0.9375rem' }}>Spending by Category</h3>
           {loading ? (
             <div className="loading-center"><span className="spinner" /></div>
           ) : breakdown.length === 0 ? (
             <div className="empty-state"><p>No spending data in range.</p></div>
           ) : (
             <>
-              <div style={{ height: 220 }}>
-                <Doughnut data={doughnutData} options={{ responsive: true, maintainAspectRatio: false,
-                  plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => ` ${fmtCurrency(ctx.raw)}` }}}}} />
+              <div style={{ height: Math.max(180, breakdown.slice(0, 8).length * 38) }}>
+                <Bar data={hBarData} options={hBarOptions} aria-label="Spending by category horizontal bar chart" />
               </div>
-              <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {breakdown.slice(0, 6).map((b, i) => (
-                  <div key={b.category} className="flex-between gap-8">
-                    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                      <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[i], flexShrink: 0 }} />
-                      {b.category}
-                    </span>
-                    <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{fmtCurrency(b.total)}</span>
-                  </div>
-                ))}
-              </div>
+              {/* Percentage annotations */}
+              {breakdown.length > 0 && (
+                <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  {breakdown.slice(0, 6).map((b, i) => {
+                    const pct = totalSpend > 0 ? ((b.total / totalSpend) * 100).toFixed(0) : 0;
+                    return (
+                      <div key={b.category} className="flex-between gap-8">
+                        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
+                          <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[i], flexShrink: 0 }} />
+                          {b.category}
+                        </span>
+                        <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{pct}%</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </>
           )}
         </div>
 
-        {/* Income vs expense */}
+        {/* Income vs Expense */}
         <div className="card">
-          <h3 style={{ fontWeight: 600, marginBottom: 16 }}>Income vs Expense (6 months)</h3>
+          <h3 style={{ fontWeight: 600, marginBottom: 16, fontSize: '0.9375rem' }}>Income vs Expenses</h3>
           <div style={{ height: 280 }}>
             {loading ? (
               <div className="loading-center"><span className="spinner" /></div>
@@ -152,7 +216,7 @@ export default function ReportsPage() {
         </div>
       </div>
 
-      {/* Spending details table */}
+      {/* Spending Details Table */}
       {spending?.categories?.length > 0 && (
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>

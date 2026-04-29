@@ -21,7 +21,7 @@ export const transactionService = {
 
   /** Update a transaction */
   update: async (id, payload) => {
-    const { data } = await api.put(`/transactions/${id}`, payload);
+    const { data } = await api.patch(`/transactions/${id}`, payload);
     return data;
   },
 

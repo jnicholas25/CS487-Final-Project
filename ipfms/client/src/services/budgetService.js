@@ -21,7 +21,7 @@ export const budgetService = {
 
   /** Update a budget */
   update: async (id, payload) => {
-    const { data } = await api.put(`/budgets/${id}`, payload);
+    const { data } = await api.patch(`/budgets/${id}`, payload);
     return data;
   },
 

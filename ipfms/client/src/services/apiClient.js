@@ -1,9 +1,11 @@
 import axios from 'axios';
 
-// Base URL comes from CRA proxy (package.json "proxy": "http://localhost:5000")
-// so we only need the API path prefix here.
+// In production REACT_APP_API_URL points to the Render backend.
+// Locally, CRA proxy (package.json "proxy") forwards /api to localhost:5000.
 const api = axios.create({
-  baseURL: '/api/v1',
+  baseURL: process.env.REACT_APP_API_URL
+    ? `${process.env.REACT_APP_API_URL}/api/v1`
+    : '/api/v1',
   timeout: 15000,
   headers: { 'Content-Type': 'application/json' },
 });

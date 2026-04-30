@@ -70,7 +70,7 @@ function KPICard({ label, value, sub, colour }) {
 export default function DashboardPage() {
   const navigate = useNavigate();
   const { scoreData, loading: scoreLoading, error: scoreError, fetchScore } = useHealthScore();
-  const { alerts, unreadCount } = useAlertContext();
+  const { unreadCount } = useAlertContext();
 
   const [netWorth,  setNetWorth]  = useState(null);
   const [trend,     setTrend]     = useState([]);

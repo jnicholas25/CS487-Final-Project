@@ -103,7 +103,7 @@ export default function AlertsPage() {
           <select className="form-select" style={{ width: 140 }} value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}>
             <option value="">All statuses</option>
-            <option value="active">Active</option>
+            <option value="open">Open</option>
             <option value="acknowledged">Acknowledged</option>
             <option value="resolved">Resolved</option>
             <option value="dismissed">Dismissed</option>

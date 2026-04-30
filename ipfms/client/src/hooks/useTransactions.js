@@ -11,7 +11,11 @@ export function useTransactions() {
     setLoading(true);
     setError(null);
     try {
-      const result = await transactionService.list(params);
+      // Strip empty-string params so they don't fail backend enum validation
+      const clean = Object.fromEntries(
+        Object.entries(params).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+      );
+      const result = await transactionService.list(clean);
       setTransactions(result.transactions || []);
       setPagination(result.pagination || null);
     } catch (err) {

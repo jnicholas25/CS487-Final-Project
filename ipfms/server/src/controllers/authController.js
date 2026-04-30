@@ -118,6 +118,42 @@ exports.getMe = async (req, res, next) => {
   }
 };
 
+// ── Update current user profile ──────────────────────────────────────────────
+
+exports.updateMe = async (req, res, next) => {
+  try {
+    const { firstName, lastName, email, phone, timezone, currency } = req.body;
+
+    const user = await User.findById(req.user._id);
+    if (!user) return next(new AppError('User not found', 404, 'USER_NOT_FOUND'));
+
+    // Only update provided fields
+    if (firstName !== undefined) user.firstName = firstName;
+    if (lastName  !== undefined) user.lastName  = lastName;
+    if (phone     !== undefined) user.phone     = phone || null;
+    if (timezone  !== undefined) user.timezone  = timezone;
+    if (currency  !== undefined) user.currency  = currency;
+
+    // Email change — check uniqueness
+    if (email !== undefined && email !== user.email) {
+      const existing = await User.findOne({ email: email.toLowerCase(), _id: { $ne: user._id } });
+      if (existing) return next(new AppError('That email is already in use', 409, 'EMAIL_TAKEN'));
+      user.email = email;
+    }
+
+    await user.save();
+    logger.info(`[Auth] Profile updated: ${user.email}`);
+
+    res.status(200).json({
+      success: true,
+      message: 'Profile updated',
+      data: { user },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // ── 2FA setup — step 1: generate secret + QR code ────────────────────────────
 
 exports.setup2FA = async (req, res, next) => {

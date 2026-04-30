@@ -8,11 +8,17 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
-// ── Request interceptor — attach JWT ──────────────────────────────────────
+// ── Request interceptor — attach JWT + strip empty query params ──────────────
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('ipfms_token');
     if (token) config.headers.Authorization = `Bearer ${token}`;
+    // Strip empty-string / null / undefined params so they don't fail backend validation
+    if (config.params) {
+      config.params = Object.fromEntries(
+        Object.entries(config.params).filter(([, v]) => v !== '' && v !== null && v !== undefined)
+      );
+    }
     return config;
   },
   (err) => Promise.reject(err),

@@ -101,11 +101,11 @@ export default function Sidebar() {
         {/* User avatar */}
         <div className="sidebar__user" title={user?.email}>
           <span className="sidebar__avatar" aria-hidden="true">
-            {user?.name?.[0]?.toUpperCase() || '?'}
+            {(user?.fullName || user?.firstName || user?.name || '?')[0]?.toUpperCase()}
           </span>
           {!collapsed && (
             <div className="sidebar__user-info">
-              <span className="sidebar__user-name truncate">{user?.name || 'User'}</span>
+              <span className="sidebar__user-name truncate">{user?.fullName || user?.firstName || user?.name || 'User'}</span>
               <span className="sidebar__user-email truncate">{user?.email || ''}</span>
             </div>
           )}

@@ -21,10 +21,10 @@ export default function SettingsPage() {
   const { user, updateUser } = useAuth();
   const [activeTab, setActiveTab] = useState('Profile');
 
-  // Parse first/last from name
+  // Use firstName/lastName from API; fall back to parsing user.name for legacy sessions
   const nameParts  = (user?.name || '').trim().split(/\s+/);
-  const [firstName, setFirstName] = useState(nameParts[0] || '');
-  const [lastName,  setLastName]  = useState(nameParts.slice(1).join(' ') || '');
+  const [firstName, setFirstName] = useState(user?.firstName || nameParts[0] || '');
+  const [lastName,  setLastName]  = useState(user?.lastName  || nameParts.slice(1).join(' ') || '');
   const [email,     setEmail]     = useState(user?.email || '');
   const [phone,     setPhone]     = useState(user?.phone || '');
   const [currency,  setCurrency]  = useState(user?.currency || 'USD');
@@ -45,9 +45,8 @@ export default function SettingsPage() {
     if (!firstName.trim()) { toast.error('First name is required'); return; }
     setSaving(true);
     try {
-      const name = [firstName.trim(), lastName.trim()].filter(Boolean).join(' ');
-      const result = await authService.updateProfile({ name, email, phone, currency, timezone });
-      updateUser(result.user || { name, email });
+      const result = await authService.updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), email, phone, currency, timezone });
+      updateUser(result.user || { firstName: firstName.trim(), lastName: lastName.trim(), email });
       toast.success('Profile updated');
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }

@@ -11,7 +11,7 @@ export function AlertProvider({ children }) {
   const fetchAlerts = useCallback(async (params = {}) => {
     setLoading(true);
     try {
-      const result = await alertService.list({ status: 'active', ...params });
+      const result = await alertService.list({ status: 'open', ...params });
       const list = result.alerts || [];
       setAlerts(list);
       setUnreadCount(list.filter((a) => !a.acknowledgedAt).length);

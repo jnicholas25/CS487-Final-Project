@@ -7,7 +7,7 @@ import ConfirmDialog          from '../components/common/ConfirmDialog';
 import { CardSkeleton }       from '../components/common/LoadingSkeleton';
 
 const ASSET_TYPES = ['stock', 'etf', 'mutual_fund', 'crypto', 'bond', 'real_estate', 'commodity', 'other'];
-const EMPTY_FORM  = { symbol: '', name: '', assetType: 'stock', quantity: '', purchasePrice: '', currentPrice: '', purchaseDate: '', currency: 'USD' };
+const EMPTY_FORM  = { symbol: '', name: '', assetType: 'stock', quantity: '', averageCostBasis: '', currentPrice: '', purchaseDate: '', currency: 'USD' };
 
 const TYPE_BADGE_COLOURS = {
   stock:       '#3B82F6',
@@ -44,14 +44,14 @@ export default function InvestmentsPage() {
     e.preventDefault();
     if (!form.symbol.trim()) { toast.error('Symbol is required'); return; }
     if (!form.quantity || isNaN(form.quantity)) { toast.error('Valid quantity required'); return; }
-    if (!form.purchasePrice || isNaN(form.purchasePrice)) { toast.error('Valid purchase price required'); return; }
+    if (!form.averageCostBasis || isNaN(form.averageCostBasis)) { toast.error('Valid purchase price required'); return; }
     setSaving(true);
     try {
       await investmentService.create({
         ...form,
-        quantity:      parseFloat(form.quantity),
-        purchasePrice: parseFloat(form.purchasePrice),
-        currentPrice:  form.currentPrice ? parseFloat(form.currentPrice) : undefined,
+        quantity:         parseFloat(form.quantity),
+        averageCostBasis: parseFloat(form.averageCostBasis),
+        currentPrice:     form.currentPrice ? parseFloat(form.currentPrice) : undefined,
       });
       toast.success('Holding added');
       setForm(EMPTY_FORM); setShowForm(false);
@@ -226,7 +226,7 @@ export default function InvestmentsPage() {
                       </span>
                     </td>
                     <td className="text-right mono">{h.quantity}</td>
-                    <td className="text-right mono">{fmtCurrency(h.purchasePrice || 0)}</td>
+                    <td className="text-right mono">{fmtCurrency(h.averageCostBasis || h.purchasePrice || 0)}</td>
                     <td className="text-right mono">{fmtCurrency(h.currentPrice || 0)}</td>
                     <td className="text-right mono">{fmtCurrency(h.currentValue || 0)}</td>
                     <td className="text-right mono" style={{ color: glCol }}>

@@ -6,7 +6,7 @@ import {
 } from 'chart.js';
 import reportService       from '../services/reportService';
 import { fmtCurrency }    from '../utils/formatCurrency';
-import { CATEGORY_COLORS } from '../constants/categories';
+import { CATEGORY_COLORS, CATEGORY_LABELS } from '../constants/categories';
 import ErrorMessage        from '../components/common/ErrorMessage';
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
@@ -71,7 +71,7 @@ export default function ReportsPage() {
 
   // Horizontal bar chart for category breakdown
   const hBarData = {
-    labels: breakdown.slice(0, 8).map((b) => b.category),
+    labels: breakdown.slice(0, 8).map((b) => CATEGORY_LABELS[b.category] || b.category),
     datasets: [{
       label: 'Spending',
       data: breakdown.slice(0, 8).map((b) => b.total),
@@ -114,10 +114,10 @@ export default function ReportsPage() {
   };
 
   // Net Worth Summary values
-  const bankTotal    = netWorth?.bankTotal ?? 0;
-  const investTotal  = netWorth?.investmentTotal ?? 0;
-  const totalSpend   = spending?.totalSpend ?? 0;
-  const totalIncome  = income?.totalIncome ?? 0;
+  const bankTotal    = netWorth?.totalBankBalance    ?? netWorth?.bankTotal    ?? 0;
+  const investTotal  = netWorth?.totalInvestmentValue ?? netWorth?.investmentTotal ?? 0;
+  const totalSpend   = spending?.totalSpend   ?? spending?.grandTotal  ?? 0;
+  const totalIncome  = income?.totalIncome   ?? income?.grandTotal   ?? 0;
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
@@ -191,7 +191,7 @@ export default function ReportsPage() {
                       <div key={b.category} className="flex-between gap-8">
                         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
                           <span style={{ width: 10, height: 10, borderRadius: 2, background: CATEGORY_COLORS[i], flexShrink: 0 }} />
-                          {b.category}
+                          {CATEGORY_LABELS[b.category] || b.category}
                         </span>
                         <span style={{ fontSize: '0.8125rem', fontWeight: 600 }}>{pct}%</span>
                       </div>
@@ -233,7 +233,7 @@ export default function ReportsPage() {
             <tbody>
               {spending.categories.map((c) => (
                 <tr key={c.category}>
-                  <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{c.category}</td>
+                  <td style={{ fontWeight: 500, color: 'var(--text-primary)' }}>{CATEGORY_LABELS[c.category] || c.category}</td>
                   <td className="text-right">{c.count}</td>
                   <td className="text-right mono" style={{ color: 'var(--red)' }}>{fmtCurrency(c.total)}</td>
                 </tr>

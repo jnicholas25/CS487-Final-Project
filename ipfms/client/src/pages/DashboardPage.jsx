@@ -15,6 +15,7 @@ import budgetService       from '../services/budgetService';
 import { fmtCurrency, fmtPctRaw } from '../utils/formatCurrency';
 import { fmtDate }         from '../utils/dateHelpers';
 import { ROUTES }          from '../constants/routes';
+import { CATEGORY_LABELS } from '../constants/categories';
 import ErrorMessage        from '../components/common/ErrorMessage';
 import { CardSkeleton }    from '../components/common/LoadingSkeleton';
 import './DashboardPage.css';
@@ -285,7 +286,7 @@ export default function DashboardPage() {
                       {tx.description}
                     </td>
                     <td>
-                      <span className="badge badge-neutral">{tx.category || 'other'}</span>
+                      <span className="badge badge-neutral">{CATEGORY_LABELS[tx.category] || tx.category || 'Other'}</span>
                     </td>
                     <td>{fmtDate(tx.date)}</td>
                     <td className="text-right mono" style={{ color: tx.amount < 0 ? 'var(--red)' : 'var(--accent)' }}>
@@ -319,7 +320,7 @@ export default function DashboardPage() {
                 return (
                   <div key={cat._id || cat.category}>
                     <div className="flex-between gap-8" style={{ marginBottom: 6 }}>
-                      <span style={{ fontSize: '0.875rem', fontWeight: 500, textTransform: 'capitalize' }}>{cat.category}</span>
+                      <span style={{ fontSize: '0.875rem', fontWeight: 500 }}>{CATEGORY_LABELS[cat.category] || cat.category}</span>
                       <span style={{ fontSize: '0.8125rem', color: pct >= 100 ? 'var(--red)' : 'var(--text-secondary)' }}>
                         {fmtCurrency(cat.spent)} / {fmtCurrency(cat.limit)}
                       </span>

@@ -33,7 +33,7 @@ export default function TopBar() {
       </div>
       <div className="topbar__right">
         <span className="topbar__greeting hide-mobile">
-          Welcome back, <strong>{user?.name?.split(' ')[0] || 'User'}</strong>
+          Welcome back, <strong>{user?.firstName || user?.fullName?.split(' ')[0] || user?.name?.split(' ')[0] || 'User'}</strong>
         </span>
       </div>
     </header>

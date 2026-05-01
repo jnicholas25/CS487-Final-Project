@@ -38,10 +38,10 @@ async function fetchAllTransactions(months = 4) {
   let page = 1;
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    const res = await transactionService.list({ startDate: start, endDate: end, limit: 200, page });
+    const res = await transactionService.list({ startDate: start, endDate: end, limit: 100, page });
     const txs = res.transactions || [];
     results.push(...txs);
-    if (txs.length < 200) break;
+    if (txs.length < 100) break;
     page++;
   }
   return results;

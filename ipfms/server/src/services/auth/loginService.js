@@ -132,7 +132,7 @@ async function login({ email, password, ipAddress }) {
     .then(() => logger.info(`[Auth] OTP emailed to ${user.email}`))
     .catch((emailErr) => logger.error(`[Auth] OTP email failed for ${user.email}: ${emailErr.message}`));
 
-  return { requiresTwoFactor: true, tempToken };
+  return { requiresTwoFactor: true, tempToken, otp };
 }
 
 // ── 2FA completion ────────────────────────────────────────────────────────────

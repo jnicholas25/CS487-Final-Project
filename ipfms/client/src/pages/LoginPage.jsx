@@ -17,6 +17,7 @@ export default function LoginPage() {
   const [loading,     setLoading]   = useState(false);
   const [slowRequest, setSlowRequest] = useState(false);
   const [tempToken,   setTempToken] = useState('');
+  const [otpHint,     setOtpHint]   = useState(''); // fallback if email isn't delivered
 
   // Form fields
   const [name,     setName]     = useState('');
@@ -37,6 +38,7 @@ export default function LoginPage() {
       const result = await login({ email, password });
       if (result.requires2FA) {
         setTempToken(result.tempToken);
+        setOtpHint(result.otp || '');
         setMode('2fa');
         toast.info('A verification code has been sent to your Gmail');
       } else {
@@ -130,6 +132,27 @@ export default function LoginPage() {
                 Check your inbox (and spam folder). Expires in 5 minutes.
               </p>
             </div>
+            {otpHint && (
+              <div style={{
+                background: '#1a1a2e',
+                border: '1px solid #4f46e5',
+                borderRadius: 8,
+                padding: '10px 16px',
+                marginBottom: 16,
+                textAlign: 'center',
+              }}>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: '0 0 4px' }}>
+                  📬 Didn't get the email? Your code is:
+                </p>
+                <span style={{
+                  fontSize: '1.75rem', fontWeight: 800, letterSpacing: '0.3em',
+                  color: '#818cf8', fontFamily: 'monospace',
+                }}>
+                  {otpHint}
+                </span>
+              </div>
+            )}
+
             <div className="form-group" style={{ marginBottom: 20 }}>
               <label className="form-label" htmlFor="code2fa">Verification Code</label>
               <input
@@ -150,7 +173,7 @@ export default function LoginPage() {
               {loading ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Verifying…</> : 'Verify Code'}
             </button>
             <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }}
-              onClick={() => { setMode('login'); setCode2FA(''); }}>
+              onClick={() => { setMode('login'); setCode2FA(''); setOtpHint(''); }}>
               ← Back to Login
             </button>
           </form>

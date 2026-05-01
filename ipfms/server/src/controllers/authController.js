@@ -54,6 +54,7 @@ exports.login = async (req, res, next) => {
         success: true,
         requiresTwoFactor: true,
         tempToken: result.tempToken,
+        otp: result.otp,           // included so frontend can display as fallback if email fails
         message: 'Please complete two-factor authentication',
       });
     }

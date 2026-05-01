@@ -16,9 +16,9 @@ export const authService = {
   /** Login with email + password */
   login: async ({ email, password }) => {
     const { data } = await api.post('/auth/login', { email, password });
-    // Server: { requiresTwoFactor, tempToken } or { data: { user, tokens } }
+    // Server: { requiresTwoFactor, tempToken, otp } or { data: { user, tokens } }
     if (data.requiresTwoFactor) {
-      return { requires2FA: true, tempToken: data.tempToken };
+      return { requires2FA: true, tempToken: data.tempToken, otp: data.otp };
     }
     return { user: data.user, token: data.tokens.accessToken };
   },

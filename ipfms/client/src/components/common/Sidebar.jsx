@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { path: ROUTES.PAYMENTS,     label: 'Payments',       icon: '⟳' },
   { path: ROUTES.REPORTS,      label: 'Reports',        icon: '☰' },
   { path: ROUTES.ALERTS,       label: 'Alerts',         icon: '◈', badge: true },
+  { path: ROUTES.INSIGHTS,     label: 'AI Insights',    icon: '🧠' },
 ];
 
 export default function Sidebar() {

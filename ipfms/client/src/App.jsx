@@ -18,6 +18,7 @@ import InvestmentsPage  from './pages/InvestmentsPage';
 import AutopaymentsPage from './pages/AutopaymentsPage';
 import ReportsPage      from './pages/ReportsPage';
 import AlertsPage       from './pages/AlertsPage';  // new in Step 8
+import InsightsPage     from './pages/InsightsPage';
 import SettingsPage     from './pages/SettingsPage';
 
 export default function App() {
@@ -62,6 +63,7 @@ export default function App() {
             <Route path={ROUTES.PAYMENTS}     element={<ProtectedRoute><AutopaymentsPage /></ProtectedRoute>} />
             <Route path={ROUTES.REPORTS}      element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
             <Route path={ROUTES.ALERTS}       element={<ProtectedRoute><AlertsPage /></ProtectedRoute>} />
+            <Route path={ROUTES.INSIGHTS}     element={<ProtectedRoute><InsightsPage /></ProtectedRoute>} />
             <Route path={ROUTES.SETTINGS}     element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
             <Route path={ROUTES.LOGIN}        element={<Navigate to={ROUTES.DASHBOARD} replace />} />
             <Route path="*"                   element={<Navigate to={ROUTES.DASHBOARD} replace />} />

@@ -7,5 +7,6 @@ export const ROUTES = {
   PAYMENTS:     '/payments',
   REPORTS:      '/reports',
   ALERTS:       '/alerts',
+  INSIGHTS:     '/insights',
   SETTINGS:     '/settings',
 };

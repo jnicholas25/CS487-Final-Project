@@ -24,10 +24,12 @@ const SEV_CONFIG = {
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 function getDateRange(months) {
+  // end = tomorrow in UTC so today's midnight-UTC transactions are always included
   const end   = new Date();
+  end.setUTCDate(end.getUTCDate() + 1);
   const start = new Date();
-  start.setMonth(start.getMonth() - months);
-  start.setDate(1);
+  start.setUTCMonth(start.getUTCMonth() - months);
+  start.setUTCDate(1);
   const fmt = (d) => d.toISOString().split('T')[0];
   return { start: fmt(start), end: fmt(end) };
 }

@@ -105,8 +105,10 @@ async function createTransaction(userId, data) {
   await transaction.save();
 
   // 5 — Update account balance (only for non-duplicate, non-pending)
+  // Credits (income/refund) increase balance; debits/fees reduce it.
   if (!isDuplicate && !transaction.isPending) {
-    await updateAccountBalance(account, transaction.amount);
+    const isInflow = ['credit', 'refund'].includes(transaction.type);
+    await updateAccountBalance(account, isInflow ? -Math.abs(transaction.amount) : Math.abs(transaction.amount));
   }
 
   logger.info(`[TransactionProcessor] Created transaction ${transaction._id} for user ${userId}`);
@@ -209,11 +211,12 @@ async function deleteTransaction(userId, transactionId) {
   transaction.deletedAt = new Date();
   await transaction.save();
 
-  // Reverse the balance impact
+  // Reverse the balance impact (opposite sign to what was applied on create)
   if (!transaction.isDuplicate && !transaction.isPending) {
     const account = await Account.findById(transaction.accountId);
     if (account) {
-      await updateAccountBalance(account, -transaction.amount); // reverse
+      const isInflow = ['credit', 'refund'].includes(transaction.type);
+      await updateAccountBalance(account, isInflow ? Math.abs(transaction.amount) : -Math.abs(transaction.amount));
     }
   }
 }

@@ -133,7 +133,7 @@ export default function DashboardPage() {
   const health = scoreData;
 
   // KPI derived values
-  const totalBalance    = netWorth?.bankTotal ?? null;
+  const totalBalance    = netWorth?.totalBankBalance ?? null;
   const monthlySpending = trend.length > 0 ? trend[trend.length - 1].total : null;
   const prevSpending    = trend.length > 1 ? trend[trend.length - 2].total : null;
   const spendingChangePct = (monthlySpending !== null && prevSpending && prevSpending > 0)
@@ -173,7 +173,7 @@ export default function DashboardPage() {
             <KPICard
               label="Total Balance"
               value={totalBalance !== null ? fmtCurrency(totalBalance) : '—'}
-              sub={netWorth ? `Investments: ${fmtCurrency(netWorth.investmentTotal)}` : null}
+              sub={netWorth ? `Investments: ${fmtCurrency(netWorth.totalInvestmentValue)}` : null}
               colour="var(--accent)"
             />
             <KPICard

@@ -23,21 +23,28 @@
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
-/** Return 'YYYY-MM' string for a Date */
+/**
+ * Return 'YYYY-MM' string for a Date.
+ * Uses UTC methods so that server-stored midnight-UTC dates are never
+ * shifted backward by a local UTC+ timezone (e.g. IST = UTC+5:30).
+ */
 function toYM(date) {
+  if (typeof date === 'string') return date.slice(0, 7);   // 'YYYY-MM-DD…' → 'YYYY-MM'
   const d = date instanceof Date ? date : new Date(date);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 }
 
-/** Current month as 'YYYY-MM' */
-function currentYM() { return toYM(new Date()); }
+/** Current month as 'YYYY-MM' (UTC) */
+function currentYM() {
+  return new Date().toISOString().slice(0, 7);
+}
 
-/** Month offset from today: -1 = last month, -2 = two months ago */
+/** Month offset from today (UTC): -1 = last month, -2 = two months ago */
 function offsetYM(offset) {
   const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + offset);
-  return toYM(d);
+  d.setUTCDate(1);
+  d.setUTCMonth(d.getUTCMonth() + offset);
+  return d.toISOString().slice(0, 7);
 }
 
 function fmt(n) {

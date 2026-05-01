@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { toast }                from 'react-toastify';
 import { useTransactions }      from '../hooks/useTransactions';
 import { useCurrency }          from '../context/CurrencyContext';
+import accountService           from '../services/accountService';
 import { fmtShortDate, startOfCurrentMonth, endOfCurrentMonth } from '../utils/dateHelpers';
 import { CATEGORY_LABELS, CATEGORIES } from '../constants/categories';
 import ErrorMessage             from '../components/common/ErrorMessage';
@@ -31,21 +32,26 @@ export default function TransactionsPage() {
   const [form,      setForm]      = useState(EMPTY_FORM);
   const [saving,    setSaving]    = useState(false);
   const [confirmId, setConfirmId] = useState(null);
+  const [accounts,  setAccounts]  = useState([]);
+
+  // Load accounts once on mount so the add-form always has a valid accountId
+  useEffect(() => {
+    accountService.list()
+      .then((res) => {
+        const accs = res.accounts || [];
+        setAccounts(accs);
+        if (accs.length > 0) {
+          setForm((f) => ({ ...f, accountId: accs[0]._id.toString() }));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const load = useCallback(() => {
     fetch({ ...filters, sort: '-date' });
   }, [filters, fetch]);
 
   useEffect(() => { load(); }, [load]);
-
-  // Auto-populate accountId from first loaded transaction so the form can submit
-  useEffect(() => {
-    if (transactions.length > 0 && !form.accountId) {
-      const first = transactions[0];
-      const id = first.accountId?._id || first.accountId;
-      if (id) setForm((f) => ({ ...f, accountId: id.toString() }));
-    }
-  }, [transactions]); // eslint-disable-line
 
   const handleFilterChange = (key, val) =>
     setFilters((f) => ({ ...f, [key]: val, page: 1 }));
@@ -55,7 +61,7 @@ export default function TransactionsPage() {
     if (!form.description.trim()) { toast.error('Description is required'); return; }
     if (!form.amount || isNaN(form.amount)) { toast.error('Valid amount is required'); return; }
     if (!form.date) { toast.error('Date is required'); return; }
-    if (!form.accountId) { toast.error('No account found — seed data first or wait for transactions to load'); return; }
+    if (!form.accountId) { toast.error('No account found. Please contact support.'); return; }
     setSaving(true);
     try {
       await create({ ...form, amount: parseFloat(form.amount) });
@@ -143,10 +149,18 @@ export default function TransactionsPage() {
               />
               <input
                 type="number" step="0.01" className="form-input" style={{ flex: 1, minWidth: 90 }}
-                placeholder="Amount ($)"
+                placeholder="Amount"
                 value={form.amount}
                 onChange={(e) => setForm({ ...form, amount: e.target.value })}
               />
+              {/* Type: debit or credit */}
+              <select className="form-select" style={{ flex: 1, minWidth: 100 }}
+                value={form.type}
+                onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                <option value="debit">Debit</option>
+                <option value="credit">Credit</option>
+                <option value="transfer">Transfer</option>
+              </select>
               <select className="form-select" style={{ flex: 1.5, minWidth: 130 }}
                 value={form.category}
                 onChange={(e) => setForm({ ...form, category: e.target.value })}>
@@ -159,6 +173,18 @@ export default function TransactionsPage() {
                 value={form.date}
                 onChange={(e) => setForm({ ...form, date: e.target.value })}
               />
+              {/* Account selector */}
+              {accounts.length > 1 && (
+                <select className="form-select" style={{ flex: 1.5, minWidth: 130 }}
+                  value={form.accountId}
+                  onChange={(e) => setForm({ ...form, accountId: e.target.value })}>
+                  {accounts.map((a) => (
+                    <option key={a._id} value={a._id}>
+                      {a.name}{a.institutionName ? ` — ${a.institutionName}` : ''}
+                    </option>
+                  ))}
+                </select>
+              )}
               <button type="submit" className="btn btn-primary" disabled={saving} style={{ flexShrink: 0 }}>
                 {saving ? <span className="spinner" style={{ width: 14, height: 14 }} /> : 'Save'}
               </button>

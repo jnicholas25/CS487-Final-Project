@@ -11,6 +11,7 @@ const alertRoutes       = require('./alertRoutes');        // Step 5
 const investmentRoutes  = require('./investmentRoutes');   // Step 7
 const reportRoutes      = require('./reportRoutes');       // Step 7
 const healthScoreRoutes = require('./healthScoreRoutes');  // Step 8
+const accountRoutes     = require('./accountRoutes');      // Accounts list
 
 // ── Mount routes ──────────────────────────────────────────────────────────────
 router.use('/auth',         authRoutes);
@@ -21,5 +22,6 @@ router.use('/alerts',       alertRoutes);
 router.use('/investments',  investmentRoutes);
 router.use('/reports',      reportRoutes);
 router.use('/health-score', healthScoreRoutes);
+router.use('/accounts',    accountRoutes);
 
 module.exports = router;

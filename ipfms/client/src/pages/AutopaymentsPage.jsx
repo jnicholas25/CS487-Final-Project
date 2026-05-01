@@ -1,23 +1,33 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { toast }          from 'react-toastify';
 import paymentService     from '../services/paymentService';
+import accountService     from '../services/accountService';
 import { useCurrency }    from '../context/CurrencyContext';
 import { fmtDate }        from '../utils/dateHelpers';
 import ErrorMessage       from '../components/common/ErrorMessage';
 import ConfirmDialog      from '../components/common/ConfirmDialog';
 import { CATEGORIES, CATEGORY_LABELS } from '../constants/categories';
 
-const FREQUENCIES = ['daily','weekly','bi-weekly','monthly','quarterly','annually'];
-const EMPTY_FORM  = { name: '', amount: '', frequency: 'monthly', nextDueDate: '', category: 'other', description: '' };
+// Values must match backend validator: ['once','daily','weekly','biweekly','monthly','quarterly','yearly']
+const FREQUENCIES = [
+  { value: 'once',      label: 'Once' },
+  { value: 'daily',     label: 'Daily' },
+  { value: 'weekly',    label: 'Weekly' },
+  { value: 'biweekly',  label: 'Bi-weekly' },
+  { value: 'monthly',   label: 'Monthly' },
+  { value: 'quarterly', label: 'Quarterly' },
+  { value: 'yearly',    label: 'Annually' },
+];
+const EMPTY_FORM  = { name: '', amount: '', frequency: 'monthly', nextDueDate: '', category: 'other', description: '', accountId: '' };
 
 function toMonthlyAmount(amount, frequency) {
   switch (frequency) {
     case 'daily':     return amount * 30;
     case 'weekly':    return amount * 4.33;
-    case 'bi-weekly': return amount * 2.17;
+    case 'biweekly':  return amount * 2.17;
     case 'monthly':   return amount;
     case 'quarterly': return amount / 3;
-    case 'annually':  return amount / 12;
+    case 'yearly':    return amount / 12;
     default:          return amount;
   }
 }
@@ -25,6 +35,7 @@ function toMonthlyAmount(amount, frequency) {
 export default function AutopaymentsPage() {
   const { fmtCurrency } = useCurrency();
   const [payments,  setPayments]  = useState([]);
+  const [accounts,  setAccounts]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);
   const [showForm,  setShowForm]  = useState(false);
@@ -44,16 +55,33 @@ export default function AutopaymentsPage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Fetch accounts once for the form selector
+  useEffect(() => {
+    accountService.list().then((r) => {
+      const accs = r.accounts || [];
+      setAccounts(accs);
+      if (accs.length > 0) setForm((f) => ({ ...f, accountId: accs[0]._id.toString() }));
+    }).catch(() => {});
+  }, []);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.name.trim())  { toast.error('Name is required'); return; }
     if (!form.amount || isNaN(form.amount)) { toast.error('Valid amount required'); return; }
     if (!form.nextDueDate)  { toast.error('Next due date is required'); return; }
+    if (!form.accountId)    { toast.error('Please select an account'); return; }
     setSaving(true);
     try {
-      await paymentService.create({ ...form, amount: parseFloat(form.amount) });
+      await paymentService.create({
+        ...form,
+        amount:      parseFloat(form.amount),
+        startDate:   form.nextDueDate,   // default startDate to nextDueDate
+        payeeName:   form.name,          // default payeeName to name
+      });
       toast.success('Scheduled payment created');
-      setForm(EMPTY_FORM); setShowForm(false); load();
+      setForm((f) => ({ ...EMPTY_FORM, accountId: f.accountId }));
+      setShowForm(false);
+      load();
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
   };
@@ -157,7 +185,7 @@ export default function AutopaymentsPage() {
                 <label className="form-label">Frequency</label>
                 <select className="form-select" value={form.frequency}
                   onChange={(e) => setForm({ ...form, frequency: e.target.value })}>
-                  {FREQUENCIES.map((f) => <option key={f} value={f}>{f.replace('-', ' ')}</option>)}
+                  {FREQUENCIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
                 </select>
               </div>
               <div className="form-group">
@@ -167,6 +195,15 @@ export default function AutopaymentsPage() {
                   {CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABELS[c] || c}</option>)}
                 </select>
               </div>
+              {accounts.length > 0 && (
+                <div className="form-group">
+                  <label className="form-label">Account *</label>
+                  <select className="form-select" value={form.accountId}
+                    onChange={(e) => setForm({ ...form, accountId: e.target.value })}>
+                    {accounts.map((a) => <option key={a._id} value={a._id}>{a.name}</option>)}
+                  </select>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: 10 }}>
               <button type="submit" className="btn btn-primary" disabled={saving}>
@@ -231,7 +268,7 @@ export default function AutopaymentsPage() {
                       </span>
                     </div>
                     <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)' }}>
-                      {CATEGORY_LABELS[p.category] || p.category} · {(p.frequency || '').replace('-', ' ')}
+                      {CATEGORY_LABELS[p.category] || p.category} · {FREQUENCIES.find((f) => f.value === p.frequency)?.label || p.frequency}
                     </p>
                   </div>
 

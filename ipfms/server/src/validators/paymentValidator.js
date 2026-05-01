@@ -24,7 +24,7 @@ const createPaymentRules = [
     .isLength({ max: 100 }).withMessage('Name cannot exceed 100 characters'),
 
   body('payeeName')
-    .notEmpty().withMessage('Payee name is required')
+    .optional()
     .trim()
     .isLength({ max: 100 }).withMessage('Payee name cannot exceed 100 characters'),
 
@@ -38,7 +38,7 @@ const createPaymentRules = [
     .withMessage(`Frequency must be one of: ${FREQUENCIES.join(', ')}`),
 
   body('startDate')
-    .notEmpty().withMessage('Start date is required')
+    .optional()
     .isISO8601().withMessage('startDate must be a valid ISO 8601 date'),
 
   body('nextDueDate')

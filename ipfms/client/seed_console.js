@@ -8,9 +8,13 @@
  *  3. Add 8 anomalous May transactions that trigger AI Insights
  */
 (async () => {
-  const BASE   = '/api/v1';
+  const BASE = window.location.hostname === 'localhost'
+    ? 'http://localhost:5000/api/v1'
+    : 'https://cs487-final-project.onrender.com/api/v1';
+
   const token  = localStorage.getItem('ipfms_token');
   if (!token) { console.error('❌  Not logged in — no token in localStorage.'); return; }
+  console.log('🔗  API base:', BASE);
 
   const h = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 

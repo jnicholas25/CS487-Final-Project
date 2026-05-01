@@ -59,7 +59,7 @@ const UserSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
-      match: [/^\S+@\S+\.\S+$/, 'Please provide a valid email address'],
+      match: [/^[^\s@]+@gmail\.com$/i, 'Only Gmail addresses (@gmail.com) are allowed to register'],
     },
     phone: {
       type: String,

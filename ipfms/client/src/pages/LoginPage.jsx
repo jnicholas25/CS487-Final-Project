@@ -5,6 +5,9 @@ import { useAuth }       from '../context/AuthContext';
 import { ROUTES }        from '../constants/routes';
 import { isEmail, isStrongPassword } from '../utils/validators';
 
+/** Only @gmail.com addresses are allowed */
+const isGmailAddress = (email) => /^[^\s@]+@gmail\.com$/i.test(email.trim());
+
 export default function LoginPage() {
   const { login, verify2FA, register } = useAuth();
   const navigate = useNavigate();
@@ -22,15 +25,16 @@ export default function LoginPage() {
 
   const handleLogin = async (e) => {
     e.preventDefault();
-    if (!isEmail(email))    { toast.error('Enter a valid email'); return; }
-    if (!password.trim())   { toast.error('Password is required'); return; }
+    if (!isEmail(email))         { toast.error('Enter a valid email'); return; }
+    if (!isGmailAddress(email))  { toast.error('Only Gmail addresses (@gmail.com) are allowed'); return; }
+    if (!password.trim())        { toast.error('Password is required'); return; }
     setLoading(true);
     try {
       const result = await login({ email, password });
       if (result.requires2FA) {
         setTempToken(result.tempToken);
         setMode('2fa');
-        toast.info('Enter your authenticator code');
+        toast.info('A verification code has been sent to your Gmail');
       } else {
         navigate(ROUTES.DASHBOARD, { replace: true });
       }
@@ -59,6 +63,7 @@ export default function LoginPage() {
     e.preventDefault();
     if (!name.trim())               { toast.error('Name is required'); return; }
     if (!isEmail(email))            { toast.error('Enter a valid email'); return; }
+    if (!isGmailAddress(email))     { toast.error('Only Gmail addresses (@gmail.com) are allowed to register'); return; }
     if (!isStrongPassword(password)){ toast.error('Password must be 8+ chars with uppercase, lowercase, number & special character'); return; }
     setLoading(true);
     try {
@@ -103,11 +108,24 @@ export default function LoginPage() {
         {/* 2FA Mode */}
         {mode === '2fa' && (
           <form onSubmit={handle2FA} noValidate>
-            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 20, textAlign: 'center' }}>
-              Enter the 6-digit code from your authenticator app.
-            </p>
+            <div style={{
+              background: 'var(--bg-primary)',
+              border: '1px solid var(--border)',
+              borderRadius: 8,
+              padding: '12px 16px',
+              marginBottom: 20,
+              textAlign: 'center',
+            }}>
+              <span style={{ fontSize: '1.5rem' }}>📧</span>
+              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: '6px 0 0' }}>
+                A 6-digit verification code has been sent to your Gmail.
+              </p>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted, var(--text-secondary))', margin: '4px 0 0' }}>
+                Check your inbox (and spam folder). Expires in 5 minutes.
+              </p>
+            </div>
             <div className="form-group" style={{ marginBottom: 20 }}>
-              <label className="form-label" htmlFor="code2fa">Authenticator Code</label>
+              <label className="form-label" htmlFor="code2fa">Verification Code</label>
               <input
                 id="code2fa"
                 type="text"
@@ -116,14 +134,14 @@ export default function LoginPage() {
                 maxLength={6}
                 placeholder="000000"
                 value={code2FA}
-                onChange={(e) => setCode2FA(e.target.value)}
+                onChange={(e) => setCode2FA(e.target.value.replace(/\D/g, ''))}
                 autoComplete="one-time-code"
                 autoFocus
                 style={{ textAlign: 'center', letterSpacing: '0.3em', fontSize: '1.25rem' }}
               />
             </div>
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Verifying…</> : 'Verify'}
+              {loading ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Verifying…</> : 'Verify Code'}
             </button>
             <button type="button" className="btn btn-ghost" style={{ width: '100%', marginTop: 8 }}
               onClick={() => { setMode('login'); setCode2FA(''); }}>
@@ -141,7 +159,7 @@ export default function LoginPage() {
                 id="email-login"
                 type="email"
                 className="form-input"
-                placeholder="you@example.com"
+                placeholder="you@gmail.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoComplete="email"
@@ -182,8 +200,8 @@ export default function LoginPage() {
                 value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" autoFocus />
             </div>
             <div className="form-group" style={{ marginBottom: 14 }}>
-              <label className="form-label" htmlFor="email-reg">Email</label>
-              <input id="email-reg" type="email" className="form-input" placeholder="you@example.com"
+              <label className="form-label" htmlFor="email-reg">Gmail Address</label>
+              <input id="email-reg" type="email" className="form-input" placeholder="you@gmail.com"
                 value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" />
             </div>
             <div className="form-group" style={{ marginBottom: 24 }}>

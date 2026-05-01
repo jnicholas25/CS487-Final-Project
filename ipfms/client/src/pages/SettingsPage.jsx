@@ -174,14 +174,24 @@ export default function SettingsPage() {
 
             <div>
               <h4 style={{ fontWeight: 600, marginBottom: 8 }}>Two-Factor Authentication</h4>
-              <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: 12 }}>
-                {user?.twoFactorEnabled
-                  ? '2FA is currently enabled on your account.'
-                  : 'Add an extra layer of security with a TOTP authenticator app.'}
-              </p>
-              <span className={`badge ${user?.twoFactorEnabled ? 'badge-success' : 'badge-neutral'}`}>
-                {user?.twoFactorEnabled ? '✓ Enabled' : 'Disabled'}
-              </span>
+              <div style={{
+                display: 'flex', alignItems: 'flex-start', gap: 12,
+                background: 'var(--bg-primary)', border: '1px solid var(--border)',
+                borderRadius: 8, padding: '12px 16px',
+              }}>
+                <span style={{ fontSize: '1.5rem', flexShrink: 0 }}>🔐</span>
+                <div>
+                  <p style={{ fontWeight: 600, fontSize: '0.9375rem', marginBottom: 4 }}>
+                    Email OTP — Always Active
+                  </p>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--text-secondary)', margin: 0 }}>
+                    A 6-digit verification code is sent to your Gmail on every login. This cannot be disabled.
+                  </p>
+                </div>
+                <span className="badge badge-success" style={{ flexShrink: 0, marginLeft: 'auto' }}>
+                  ✓ Active
+                </span>
+              </div>
             </div>
           </div>
         )}

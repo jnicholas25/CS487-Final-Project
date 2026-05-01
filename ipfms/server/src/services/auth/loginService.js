@@ -1,10 +1,34 @@
+const crypto = require('crypto');
 const User = require('../../models/User');
 const { AppError } = require('../../middleware/errorHandler');
 const { assertNotLocked, recordFailedAttempt, clearLockout } = require('./lockoutService');
 const { generateTokenPair, verifyRefreshToken } = require('./tokenService');
 const { verifyToken, consumeBackupCode } = require('./twoFactorService');
+const { sendLoginOTP } = require('../notifications/emailService');
 const env = require('../../config/environment');
 const logger = require('../../utils/logger');
+
+// ── OTP helpers ───────────────────────────────────────────────────────────────
+
+/** Generate a 6-digit numeric OTP */
+function generateOTP() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+/** HMAC-SHA256 hash of an OTP with a random salt */
+function hashOTP(otp) {
+  const salt = crypto.randomBytes(16).toString('hex');
+  const hash = crypto.createHmac('sha256', salt).update(otp).digest('hex');
+  return { hash, salt };
+}
+
+/** Verify an OTP against a stored hash + salt */
+function verifyOTPCode(otp, storedHash, salt) {
+  if (!otp || !storedHash || !salt) return false;
+  const hash = crypto.createHmac('sha256', salt).update(otp.trim()).digest('hex');
+  // Constant-time comparison
+  return crypto.timingSafeEqual(Buffer.from(hash, 'hex'), Buffer.from(storedHash, 'hex'));
+}
 
 /**
  * Login Service — handles full authentication flow.
@@ -26,6 +50,11 @@ const logger = require('../../utils/logger');
  * @returns {Promise<{ user: object, tokens: object }>}
  */
 async function register({ firstName, lastName, email, password, phone }) {
+  // Gmail-only check
+  if (!email.toLowerCase().endsWith('@gmail.com')) {
+    throw new AppError('Only Gmail addresses (@gmail.com) are allowed to register', 400, 'GMAIL_REQUIRED');
+  }
+
   // Check for existing account
   const existing = await User.findOne({ email: email.toLowerCase() });
   if (existing) {
@@ -90,55 +119,72 @@ async function login({ email, password, ipAddress }) {
     throw new AppError(message, 401, isLocked ? 'ACCOUNT_LOCKED' : 'INVALID_CREDENTIALS');
   }
 
-  // 4 — 2FA gate
-  if (user.twoFactor.enabled) {
-    // Issue a short-lived temp token so the client can complete 2FA
-    const tempToken = generateTempToken(user._id.toString());
-    return { requiresTwoFactor: true, tempToken };
+  // 4 — Mandatory 2FA: always send an email OTP and require it
+  const otp = generateOTP();
+  const { hash: otpHash, salt: otpSalt } = hashOTP(otp);
+
+  // Send OTP to the user's Gmail (non-blocking on send failure in dev)
+  try {
+    await sendLoginOTP({ to: user.email, otp, name: user.firstName });
+  } catch (emailErr) {
+    // Log but do NOT expose email errors to the client — OTP still embedded in temp token
+    logger.error(`[Auth] Failed to send login OTP email to ${user.email}: ${emailErr.message}`);
+    // In production, rethrow so user knows something is wrong with email delivery
+    if (env.isProduction) {
+      throw new AppError('Failed to send verification code. Please try again.', 503, 'EMAIL_SEND_FAILED');
+    }
   }
 
-  // 5 — Success — clear lockout and issue tokens
-  await clearLockout(user._id, ipAddress);
-  logger.info(`[Auth] Login success: ${user.email}`);
+  // Issue short-lived temp token containing the OTP hash
+  const tempToken = generateTempToken(user._id.toString(), otpHash, otpSalt);
+  logger.info(`[Auth] OTP sent to ${user.email} — awaiting 2FA`);
 
-  const tokens = generateTokenPair({
-    userId: user._id.toString(),
-    email: user.email,
-    role: user.role,
-  });
-
-  return { requiresTwoFactor: false, user: sanitizeUser(user), tokens };
+  return { requiresTwoFactor: true, tempToken };
 }
 
 // ── 2FA completion ────────────────────────────────────────────────────────────
 
 /**
  * Complete login after passing the 2FA check.
- * @param {{ tempToken, totpCode?, backupCode?, ipAddress? }} params
+ *
+ * Accepts one of:
+ *   - emailOtp  — 6-digit code sent to the user's Gmail (mandatory for all users)
+ *   - totpCode  — TOTP from an authenticator app (for users who set up TOTP)
+ *   - backupCode — one-time backup code (for users who set up TOTP)
+ *
+ * @param {{ tempToken, emailOtp?, totpCode?, backupCode?, ipAddress? }} params
  * @returns {Promise<{ user: object, tokens: object }>}
  */
-async function verifyTwoFactor({ tempToken, totpCode, backupCode, ipAddress }) {
-  // Validate temp token
-  const userId = verifyTempToken(tempToken);
+async function verifyTwoFactor({ tempToken, emailOtp, totpCode, backupCode, ipAddress }) {
+  // Validate temp token — returns full decoded payload including OTP hash
+  const decoded = verifyTempToken(tempToken);
+  const userId = decoded.sub;
 
   const user = await User.findById(userId)
     .select('+twoFactor.secret +twoFactor.backupCodes +twoFactor.enabled');
 
-  if (!user || !user.twoFactor.enabled) {
+  if (!user) {
     throw new AppError('Invalid or expired session', 401, 'INVALID_SESSION');
   }
 
   let verified = false;
 
-  if (totpCode) {
+  if (emailOtp) {
+    // Primary path: verify email OTP (available to ALL users)
+    verified = verifyOTPCode(emailOtp, decoded.otpHash, decoded.otpSalt);
+  } else if (totpCode && user.twoFactor?.enabled) {
+    // Alternate path: TOTP for users who have set up an authenticator app
     verified = verifyToken(user.twoFactor.secret, totpCode);
-  } else if (backupCode) {
+  } else if (backupCode && user.twoFactor?.enabled) {
+    // Backup path: one-time backup code for TOTP users
     verified = await consumeBackupCode(user, backupCode);
+  } else {
+    throw new AppError('Please provide the verification code sent to your Gmail', 400, 'OTP_REQUIRED');
   }
 
   if (!verified) {
     await recordFailedAttempt(user._id);
-    throw new AppError('Invalid verification code', 401, 'INVALID_2FA_TOKEN');
+    throw new AppError('Invalid verification code. Please check your Gmail and try again.', 401, 'INVALID_2FA_TOKEN');
   }
 
   await clearLockout(user._id, ipAddress);
@@ -187,17 +233,31 @@ async function refreshTokens(refreshToken) {
 // Temp token: signed with a derived key, lives for 5 minutes
 const TEMP_TOKEN_SECRET = 'temp_2fa_' + env.JWT_SECRET;
 
-function generateTempToken(userId) {
+/**
+ * Generate a short-lived temp token encoding the OTP hash.
+ * @param {string} userId
+ * @param {string} [otpHash]  HMAC-SHA256 of the OTP
+ * @param {string} [otpSalt]  Salt used in the HMAC
+ */
+function generateTempToken(userId, otpHash, otpSalt) {
   const jwt = require('jsonwebtoken');
-  return jwt.sign({ sub: userId, type: 'temp_2fa' }, TEMP_TOKEN_SECRET, { expiresIn: '5m' });
+  const payload = { sub: userId, type: 'temp_2fa' };
+  if (otpHash) payload.otpHash = otpHash;
+  if (otpSalt) payload.otpSalt = otpSalt;
+  return jwt.sign(payload, TEMP_TOKEN_SECRET, { expiresIn: '5m' });
 }
 
+/**
+ * Verify and decode a temp token.
+ * @param {string} token
+ * @returns {object} Full decoded JWT payload (includes sub, otpHash, otpSalt)
+ */
 function verifyTempToken(token) {
   const jwt = require('jsonwebtoken');
   try {
     const decoded = jwt.verify(token, TEMP_TOKEN_SECRET);
     if (decoded.type !== 'temp_2fa') throw new Error('wrong type');
-    return decoded.sub;
+    return decoded; // Return full payload (not just sub)
   } catch {
     throw new AppError('Invalid or expired 2FA session token', 401, 'INVALID_TEMP_TOKEN');
   }

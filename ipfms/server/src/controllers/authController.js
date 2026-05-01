@@ -72,10 +72,10 @@ exports.login = async (req, res, next) => {
 
 exports.verifyTwoFactor = async (req, res, next) => {
   try {
-    const { tempToken, totpCode, backupCode } = req.body;
+    const { tempToken, emailOtp, totpCode, backupCode } = req.body;
     const ipAddress = req.ip || req.connection.remoteAddress;
 
-    const { user, tokens } = await verifyTwoFactor({ tempToken, totpCode, backupCode, ipAddress });
+    const { user, tokens } = await verifyTwoFactor({ tempToken, emailOtp, totpCode, backupCode, ipAddress });
 
     res.status(200).json({
       success: true,

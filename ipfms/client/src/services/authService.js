@@ -23,9 +23,10 @@ export const authService = {
     return { user: data.user, token: data.tokens.accessToken };
   },
 
-  /** Verify a 2FA TOTP code */
+  /** Verify the email OTP sent during login (mandatory 2FA) */
   verify2FA: async ({ tempToken, code }) => {
-    const { data } = await api.post('/auth/2fa/verify', { tempToken, totpCode: code });
+    // Send as emailOtp — the backend also accepts totpCode for authenticator-app users
+    const { data } = await api.post('/auth/2fa/verify', { tempToken, emailOtp: code });
     // After interceptor unwrap: data = { user, tokens }
     return { user: data.user, token: data.tokens.accessToken };
   },

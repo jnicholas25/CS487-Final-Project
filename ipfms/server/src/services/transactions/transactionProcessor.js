@@ -76,7 +76,7 @@ async function createTransaction(userId, data) {
   const transaction = new Transaction({
     userId,
     accountId: data.accountId,
-    externalId: data.externalId || null,
+    externalId: data.externalId || `manual-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
     idempotencyKey: data.idempotencyKey || null,
     amount: data.amount,
     currency: data.currency || account.currency || 'USD',

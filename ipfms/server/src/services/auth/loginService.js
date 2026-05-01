@@ -119,25 +119,18 @@ async function login({ email, password, ipAddress }) {
     throw new AppError(message, 401, isLocked ? 'ACCOUNT_LOCKED' : 'INVALID_CREDENTIALS');
   }
 
-  // 4 — Mandatory 2FA: always send an email OTP and require it
+  // 4 — Mandatory 2FA: generate OTP, return temp token immediately, send email in background
   const otp = generateOTP();
   const { hash: otpHash, salt: otpSalt } = hashOTP(otp);
 
-  // Send OTP to the user's Gmail (non-blocking on send failure in dev)
-  try {
-    await sendLoginOTP({ to: user.email, otp, name: user.firstName });
-  } catch (emailErr) {
-    // Log but do NOT expose email errors to the client — OTP still embedded in temp token
-    logger.error(`[Auth] Failed to send login OTP email to ${user.email}: ${emailErr.message}`);
-    // In production, rethrow so user knows something is wrong with email delivery
-    if (env.isProduction) {
-      throw new AppError('Failed to send verification code. Please try again.', 503, 'EMAIL_SEND_FAILED');
-    }
-  }
-
-  // Issue short-lived temp token containing the OTP hash
+  // Issue temp token BEFORE sending the email so the HTTP response is instant.
+  // Email delivery is fire-and-forget — the OTP hash is already signed into the token.
   const tempToken = generateTempToken(user._id.toString(), otpHash, otpSalt);
-  logger.info(`[Auth] OTP sent to ${user.email} — awaiting 2FA`);
+
+  // Fire-and-forget: send the email without blocking the response
+  sendLoginOTP({ to: user.email, otp, name: user.firstName })
+    .then(() => logger.info(`[Auth] OTP emailed to ${user.email}`))
+    .catch((emailErr) => logger.error(`[Auth] OTP email failed for ${user.email}: ${emailErr.message}`));
 
   return { requiresTwoFactor: true, tempToken };
 }

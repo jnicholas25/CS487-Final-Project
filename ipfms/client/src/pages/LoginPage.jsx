@@ -13,9 +13,10 @@ export default function LoginPage() {
   const navigate = useNavigate();
 
   // 'login' | 'register' | '2fa'
-  const [mode,      setMode]      = useState('login');
-  const [loading,   setLoading]   = useState(false);
-  const [tempToken, setTempToken] = useState('');
+  const [mode,        setMode]      = useState('login');
+  const [loading,     setLoading]   = useState(false);
+  const [slowRequest, setSlowRequest] = useState(false);
+  const [tempToken,   setTempToken] = useState('');
 
   // Form fields
   const [name,     setName]     = useState('');
@@ -29,6 +30,9 @@ export default function LoginPage() {
     if (!isGmailAddress(email))  { toast.error('Only Gmail addresses (@gmail.com) are allowed'); return; }
     if (!password.trim())        { toast.error('Password is required'); return; }
     setLoading(true);
+    setSlowRequest(false);
+    // After 5 seconds show a "waking up server…" message (Render free tier cold start)
+    const slowTimer = setTimeout(() => setSlowRequest(true), 5000);
     try {
       const result = await login({ email, password });
       if (result.requires2FA) {
@@ -41,7 +45,9 @@ export default function LoginPage() {
     } catch (err) {
       toast.error(err.message || 'Login failed');
     } finally {
+      clearTimeout(slowTimer);
       setLoading(false);
+      setSlowRequest(false);
     }
   };
 
@@ -179,8 +185,15 @@ export default function LoginPage() {
               />
             </div>
             <button type="submit" className="btn btn-primary" style={{ width: '100%' }} disabled={loading}>
-              {loading ? <><span className="spinner" style={{ width: 16, height: 16 }} /> Signing in…</> : 'Sign In'}
+              {loading
+                ? <><span className="spinner" style={{ width: 16, height: 16 }} /> {slowRequest ? 'Waking up server…' : 'Signing in…'}</>
+                : 'Sign In'}
             </button>
+            {slowRequest && (
+              <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'center', marginTop: 8 }}>
+                Server is starting up — this may take up to 30 seconds on first load.
+              </p>
+            )}
             <p style={{ textAlign: 'center', marginTop: 16, fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
               Don't have an account?{' '}
               <button type="button" onClick={() => setMode('register')}

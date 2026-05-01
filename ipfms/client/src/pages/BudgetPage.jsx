@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { toast }         from 'react-toastify';
 import { useBudget }     from '../hooks/useBudget';
-import { fmtCurrency }   from '../utils/formatCurrency';
+import { useCurrency }   from '../context/CurrencyContext';
 import { fmtMonthYear, startOfCurrentMonth, endOfCurrentMonth } from '../utils/dateHelpers';
 import { CATEGORY_LABELS, CATEGORIES } from '../constants/categories';
 import ErrorMessage      from '../components/common/ErrorMessage';
@@ -18,6 +18,7 @@ const EMPTY_FORM = {
 };
 
 export default function BudgetPage() {
+  const { fmtCurrency } = useCurrency();
   const { budgets, recommendations, loading, error, fetch, fetchRecommendations, create, remove } = useBudget();
   const [showForm,  setShowForm]  = useState(false);
   const [form,      setForm]      = useState(EMPTY_FORM);

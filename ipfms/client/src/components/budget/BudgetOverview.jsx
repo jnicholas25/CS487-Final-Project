@@ -1,6 +1,7 @@
 import React from 'react';
-import { fmtCurrency } from '../../utils/formatCurrency';
+import { useCurrency } from '../../context/CurrencyContext';
 export default function BudgetOverview({ budgets = [] }) {
+  const { fmtCurrency } = useCurrency();
   const total   = budgets.reduce((s, b) => s + b.amount, 0);
   const spent   = budgets.reduce((s, b) => s + (b.spent || 0), 0);
   return (

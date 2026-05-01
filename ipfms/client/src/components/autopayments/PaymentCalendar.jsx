@@ -1,8 +1,9 @@
 import React from 'react';
 import { fmtDate } from '../../utils/dateHelpers';
-import { fmtCurrency } from '../../utils/formatCurrency';
+import { useCurrency } from '../../context/CurrencyContext';
 /** Calendar-style view: groups payments by their next due date */
 export default function PaymentCalendar({ payments = [] }) {
+  const { fmtCurrency } = useCurrency();
   const upcoming = [...payments]
     .filter(p => p.status === 'active' && p.nextDueDate)
     .sort((a, b) => new Date(a.nextDueDate) - new Date(b.nextDueDate))

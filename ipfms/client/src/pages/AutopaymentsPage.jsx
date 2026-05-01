@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { toast }          from 'react-toastify';
 import paymentService     from '../services/paymentService';
-import { fmtCurrency }    from '../utils/formatCurrency';
+import { useCurrency }    from '../context/CurrencyContext';
 import { fmtDate }        from '../utils/dateHelpers';
 import ErrorMessage       from '../components/common/ErrorMessage';
 import ConfirmDialog      from '../components/common/ConfirmDialog';
@@ -23,6 +23,7 @@ function toMonthlyAmount(amount, frequency) {
 }
 
 export default function AutopaymentsPage() {
+  const { fmtCurrency } = useCurrency();
   const [payments,  setPayments]  = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);

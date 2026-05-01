@@ -8,9 +8,10 @@ import './styles/global.css';
 import 'react-toastify/dist/ReactToastify.css';
 
 import App from './App';
-import { AuthProvider }  from './context/AuthContext';
-import { ThemeProvider } from './context/ThemeContext';
-import { AlertProvider } from './context/AlertContext';
+import { AuthProvider }     from './context/AuthContext';
+import { ThemeProvider }    from './context/ThemeContext';
+import { AlertProvider }    from './context/AlertContext';
+import { CurrencyProvider } from './context/CurrencyContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -18,6 +19,7 @@ root.render(
     <BrowserRouter>
       <ThemeProvider>
         <AuthProvider>
+          <CurrencyProvider>
           <AlertProvider>
             <App />
             <ToastContainer
@@ -38,6 +40,7 @@ root.render(
               }}
             />
           </AlertProvider>
+          </CurrencyProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

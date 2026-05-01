@@ -5,7 +5,7 @@ import {
   LinearScale, Tooltip, Legend,
 } from 'chart.js';
 import reportService       from '../services/reportService';
-import { fmtCurrency }    from '../utils/formatCurrency';
+import { useCurrency }    from '../context/CurrencyContext';
 import { CATEGORY_COLORS, CATEGORY_LABELS } from '../constants/categories';
 import ErrorMessage        from '../components/common/ErrorMessage';
 
@@ -28,6 +28,7 @@ function getDateRange(months) {
 }
 
 export default function ReportsPage() {
+  const { fmtCurrency } = useCurrency();
   const [netWorth,    setNetWorth]    = useState(null);
   const [breakdown,   setBreakdown]   = useState([]);
   const [incomeVsExp, setIncomeVsExp] = useState([]);

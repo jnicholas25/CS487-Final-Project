@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import investmentService from '../../services/investmentService';
-import { fmtCurrency } from '../../utils/formatCurrency';
-import { fmtDate }     from '../../utils/dateHelpers';
+import { useCurrency }  from '../../context/CurrencyContext';
+import { fmtDate }      from '../../utils/dateHelpers';
 export default function DividendHistory() {
+  const { fmtCurrency } = useCurrency();
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {

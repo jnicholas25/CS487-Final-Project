@@ -1,6 +1,7 @@
 import React from 'react';
-import { fmtCurrency } from '../../utils/formatCurrency';
+import { useCurrency } from '../../context/CurrencyContext';
 export default function PortfolioSummary({ summary }) {
+  const { fmtCurrency } = useCurrency();
   if (!summary) return null;
   return (
     <div className="card">

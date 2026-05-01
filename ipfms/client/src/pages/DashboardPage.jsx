@@ -12,7 +12,8 @@ import { useAlertContext } from '../context/AlertContext';
 import reportService       from '../services/reportService';
 import transactionService  from '../services/transactionService';
 import budgetService       from '../services/budgetService';
-import { fmtCurrency, fmtPctRaw } from '../utils/formatCurrency';
+import { fmtPctRaw }    from '../utils/formatCurrency';
+import { useCurrency } from '../context/CurrencyContext';
 import { fmtDate }         from '../utils/dateHelpers';
 import { ROUTES }          from '../constants/routes';
 import { CATEGORY_LABELS } from '../constants/categories';
@@ -69,6 +70,7 @@ function KPICard({ label, value, sub, colour }) {
 // ── Main Dashboard ────────────────────────────────────────────────────────
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const { fmtCurrency } = useCurrency();
   const { scoreData, loading: scoreLoading, error: scoreError, fetchScore } = useHealthScore();
   const { unreadCount } = useAlertContext();
 

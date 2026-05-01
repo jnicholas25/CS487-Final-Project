@@ -1,6 +1,7 @@
 import React from 'react';
-import { fmtCurrency } from '../../utils/formatCurrency';
+import { useCurrency } from '../../context/CurrencyContext';
 export default function BudgetCategoryCard({ category }) {
+  const { fmtCurrency } = useCurrency();
   if (!category) return null;
   const pct = category.limit > 0 ? Math.min(100, (category.spent / category.limit) * 100) : 0;
   const colour = pct >= 100 ? 'var(--red)' : pct >= 80 ? 'var(--orange)' : 'var(--accent)';

@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { toast }              from 'react-toastify';
 import investmentService      from '../services/investmentService';
-import { fmtCurrency }        from '../utils/formatCurrency';
+import { useCurrency }        from '../context/CurrencyContext';
 import ErrorMessage           from '../components/common/ErrorMessage';
 import ConfirmDialog          from '../components/common/ConfirmDialog';
 import { CardSkeleton }       from '../components/common/LoadingSkeleton';
@@ -21,6 +21,7 @@ const TYPE_BADGE_COLOURS = {
 };
 
 export default function InvestmentsPage() {
+  const { fmtCurrency } = useCurrency();
   const [portfolio, setPortfolio] = useState(null);
   const [loading,   setLoading]   = useState(true);
   const [error,     setError]     = useState(null);

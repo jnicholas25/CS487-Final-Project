@@ -1,5 +1,4 @@
 import React from 'react';
-import { fmtCurrency } from '../../utils/formatCurrency';
 /** Inline alert banner shown when a budget category is near or over limit */
 export default function BudgetAlertBanner({ budgets = [] }) {
   const alerts = budgets.filter(b => b.categories?.some(c => (c.spent / c.limit) >= 0.8));

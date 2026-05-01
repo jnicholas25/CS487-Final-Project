@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { toast }                from 'react-toastify';
 import { useTransactions }      from '../hooks/useTransactions';
-import { fmtCurrency }          from '../utils/formatCurrency';
+import { useCurrency }          from '../context/CurrencyContext';
 import { fmtShortDate, startOfCurrentMonth, endOfCurrentMonth } from '../utils/dateHelpers';
 import { CATEGORY_LABELS, CATEGORIES } from '../constants/categories';
 import ErrorMessage             from '../components/common/ErrorMessage';
@@ -15,6 +15,7 @@ const EMPTY_FORM = {
 };
 
 export default function TransactionsPage() {
+  const { fmtCurrency } = useCurrency();
   const { transactions, pagination, loading, error, fetch, create, remove } = useTransactions();
 
   const [filters, setFilters] = useState({

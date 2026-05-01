@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { toast }          from 'react-toastify';
 import { useAuth }        from '../context/AuthContext';
+import { useCurrency }    from '../context/CurrencyContext';
 import authService        from '../services/authService';
 
 const TABS = [
@@ -18,7 +19,8 @@ const TIMEZONES  = [
 ];
 
 export default function SettingsPage() {
-  const { user, updateUser } = useAuth();
+  const { user, updateUser }           = useAuth();
+  const { updateCurrency: setCurrCtx } = useCurrency();
   const [activeTab, setActiveTab] = useState('Profile');
 
   // Use firstName/lastName from API; fall back to parsing user.name for legacy sessions
@@ -46,7 +48,8 @@ export default function SettingsPage() {
     setSaving(true);
     try {
       const result = await authService.updateProfile({ firstName: firstName.trim(), lastName: lastName.trim(), email, phone, currency, timezone });
-      updateUser(result.user || { firstName: firstName.trim(), lastName: lastName.trim(), email });
+      updateUser(result.user || { firstName: firstName.trim(), lastName: lastName.trim(), email, currency, timezone });
+      setCurrCtx(currency);   // propagate new currency to context → re-renders all formatters
       toast.success('Profile updated');
     } catch (err) { toast.error(err.message); }
     finally { setSaving(false); }
